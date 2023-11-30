@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   AppBar,
@@ -14,38 +14,21 @@ import {
   Send as SendIcon,
 } from "@mui/icons-material";
 
+import { getMessages, getReply, sendMessage } from "./api/message";
 import { createSession, getSession } from "./api/session";
 import { getWebsiteData } from "./api/website";
 import ChatBubble from "./components/ChatBubble";
-import { MessageProps } from "./types/message";
 import { WebsiteProps } from "./types/website";
-import { getMessages, getReply, sendMessage } from "./api/message";
-
-const initialMessages: MessageProps[] = [
-  {
-    createdAt: {
-      _seconds: 1701330973,
-      _nanoseconds: 526000000,
-    },
-    children: [
-      {
-        content: "url test",
-        imageUrl:
-          "https://firebasestorage.googleapis.com/v0/b/chatbot-32ff4.appspot.com/o/HYU_symbol_basic_png.png?alt=media&token=400cf1a9-6f47-4ed4-9356-9dd7b01d0eb3",
-        role: "assistant",
-        url: "https://firebasestorage.googleapis.com/v0/b/chatbot-32ff4.appspot.com/o/HYU_symbol_basic_png.png?alt=media&token=400cf1a9-6f47-4ed4-9356-9dd7b01d0eb3",
-      },
-    ],
-    id: "1",
-  },
-];
+import { MessageProps } from "./types/message";
 
 const App = () => {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState(initialMessages);
-  const [websiteData, setWebsiteData] = useState<WebsiteProps>();
+  const [messages, setMessages] = useState<MessageProps[]>([]);
   const [sessionId, setSessionId] = useState(localStorage.getItem("cb_id"));
+  const [websiteData, setWebsiteData] = useState<WebsiteProps>();
   const [websiteId] = useState(window.location.pathname.split("/")[1]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const setSession = async () => {
@@ -78,6 +61,12 @@ const App = () => {
     initializeSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (scrollRef.current?.scrollHeight) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleSendMessage = async () => {
     try {
@@ -125,12 +114,15 @@ const App = () => {
           </IconButton>
         </Toolbar>
       </AppBar>
-      <Box sx={{ overflowY: "auto", height: "calc(100% - 214px)" }}>
+      <Box
+        ref={scrollRef}
+        sx={{ overflowY: "auto", height: "calc(100% - 214px)" }}
+      >
         <Typography
           component="div"
           mb="29px"
           mt="23px"
-          mx="115px"
+          mx="30px"
           textAlign="center"
           fontSize="12px"
           color="#A0A0A0"
