@@ -84,8 +84,8 @@ const App = () => {
 
   return (
     <Box className="App" sx={{ height: "100%", overflowY: "hidden" }}>
-      <AppBar position="static" sx={{ height: "134px" }}>
-        <Toolbar variant="dense" sx={{ py: "36px", px: "34px" }}>
+      <AppBar position="static" sx={{ height: "96px" }}>
+        <Toolbar variant="dense" sx={{ py: "18px", px: "36px" }}>
           {websiteData?.imageUrl && (
             <img
               src={websiteData?.imageUrl}
@@ -116,7 +116,7 @@ const App = () => {
       </AppBar>
       <Box
         ref={scrollRef}
-        sx={{ overflowY: "auto", height: "calc(100% - 214px)" }}
+        sx={{ overflowY: "auto", height: "calc(100% - 176px)" }}
       >
         <Typography
           component="div"
