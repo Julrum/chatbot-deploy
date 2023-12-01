@@ -7,8 +7,11 @@ import ChatBubble from "./components/ChatBubble";
 import { WebsiteProps } from "./types/website";
 import { MessageProps } from "./types/message";
 
+import "./styles/App.css";
+
 const App = () => {
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<MessageProps[]>([]);
   const [sessionId, setSessionId] = useState(localStorage.getItem("cb_id"));
@@ -21,8 +24,6 @@ const App = () => {
     const theme = async (from: string) => {
       await ui("theme", from);
     };
-
-    theme("#3d7cc9");
 
     const setSession = async () => {
       const newSessionID = await createSession(websiteId);
@@ -47,6 +48,9 @@ const App = () => {
         }
         const newWebsiteData = await getWebsiteData(websiteId);
         setWebsiteData(newWebsiteData);
+        theme(
+          newWebsiteData.primaryColor ?? newWebsiteData.imageUrl ?? "#3d7cc9"
+        );
       } catch (error) {
         console.log(error);
         setErrorMessage("챗봇을 불러오는데 실패했습니다.");
@@ -66,11 +70,17 @@ const App = () => {
   const handleSendMessage = async () => {
     try {
       if (sessionId) {
-        const newMessage = await sendMessage(websiteId, sessionId, message);
-        setMessages([...messages, newMessage]);
-        setMessage("");
-        const reply = await getReply(websiteId, sessionId, newMessage.id);
-        setMessages([...messages, newMessage, reply]);
+        if (!isSending && message) {
+          setIsSending(true);
+          const newMessage = await sendMessage(websiteId, sessionId, message);
+          setMessages([...messages, newMessage]);
+          setMessage("");
+          const reply = await getReply(websiteId, sessionId, newMessage.id);
+          setMessages([...messages, newMessage, reply]);
+          setIsSending(false);
+        }
+      } else {
+        throw new Error("메시지 전송에 실패했습니다. 새로고침 해주세요.");
       }
     } catch (error) {
       console.log(error);
@@ -80,7 +90,7 @@ const App = () => {
   };
 
   return (
-    <div className="App" style={{ height: "100%", overflowY: "hidden" }}>
+    <div className="App">
       <header className="primary-container fixed">
         <nav>
           {websiteData?.imageUrl && (
@@ -90,7 +100,7 @@ const App = () => {
               src={websiteData?.imageUrl}
             />
           )}
-          <p className="max" style={{ fontSize: "18px" }}>
+          <p id="website-name" className="max">
             {websiteData?.name}
           </p>
           <button aria-label="contact" className="circle transparent">
@@ -107,19 +117,9 @@ const App = () => {
           </button>
         </nav>
       </header>
-      <main
-        className="scroll"
-        ref={scrollRef}
-        style={{ height: "calc(100% - 144px)" }}
-      >
+      <main className="scroll" ref={scrollRef}>
         <div className="no-line center-align">
-          <p
-            className="medium-text"
-            style={{
-              margin: "23px 30px 29px",
-              color: "#A0A0A0",
-            }}
-          >
+          <p id="disclaimer" className="medium-text">
             {websiteData?.disclaimer}
           </p>
         </div>
@@ -148,10 +148,11 @@ const App = () => {
             ))
           )
         )}
+        <div id="footer-spacer" />
       </main>
-      <footer className="fixed fill">
-        <nav className="no-space">
-          <div className="max field label  border small left-round">
+      <footer className="fixed large-blur">
+        <nav>
+          <div className="max field label border small round">
             <input
               onChange={(e) => {
                 setMessage(e.target.value);
@@ -168,7 +169,7 @@ const App = () => {
           </div>
           <button
             aria-label="send"
-            className="right-round"
+            className="circle no-padding"
             disabled={!message}
             onClick={handleSendMessage}
           >

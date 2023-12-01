@@ -37,20 +37,21 @@ const ChatBubble = ({
       }
       onClick={url ? () => window.open(url, "_blank") : undefined}
       style={{
+        boxShadow: "none",
         borderRadius:
           role === "user" ? "12px 12px 0px 12px" : "12px 12px 12px 0px",
+        cursor: url ? "pointer" : "default",
         maxWidth: "70%",
         width: "fit-content",
         wordBreak: "break-word",
-        cursor: url ? "pointer" : "default",
       }}
     >
       {imageUrl && (
         <img alt="url preview" className="responsive medium" src={imageUrl} />
       )}
-      <div style={{ padding: "10px 20px" }}>
+      <div style={{ padding: "10px 14px" }}>
         {title && <h5>{title}</h5>}
-        <p className="no-line">{content}</p>
+        <p className="no-line no-margin">{content}</p>
       </div>
     </article>
     {role === "assistant" && (
