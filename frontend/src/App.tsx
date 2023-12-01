@@ -1,19 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-import {
-  AppBar,
-  Box,
-  IconButton,
-  TextField,
-  Toolbar,
-  Typography,
-} from "@mui/material";
-import {
-  Close as CloseIcon,
-  HeadsetMic as HeadsetMicIcon,
-  Send as SendIcon,
-} from "@mui/icons-material";
-
 import { getMessages, getReply, sendMessage } from "./api/message";
 import { createSession, getSession } from "./api/session";
 import { getWebsiteData } from "./api/website";
@@ -22,6 +8,7 @@ import { WebsiteProps } from "./types/website";
 import { MessageProps } from "./types/message";
 
 const App = () => {
+  const [errorMessage, setErrorMessage] = useState("");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<MessageProps[]>([]);
   const [sessionId, setSessionId] = useState(localStorage.getItem("cb_id"));
@@ -31,6 +18,12 @@ const App = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const theme = async (from: string) => {
+      await ui("theme", from);
+    };
+
+    theme("#3d7cc9");
+
     const setSession = async () => {
       const newSessionID = await createSession(websiteId);
       localStorage.setItem("cb_id", newSessionID.id);
@@ -56,6 +49,8 @@ const App = () => {
         setWebsiteData(newWebsiteData);
       } catch (error) {
         console.log(error);
+        setErrorMessage("챗봇을 불러오는데 실패했습니다.");
+        ui("#snackbar");
       }
     };
     initializeSession();
@@ -79,62 +74,53 @@ const App = () => {
       }
     } catch (error) {
       console.log(error);
+      setErrorMessage("메시지 전송에 실패했습니다.");
+      ui("#snackbar");
     }
   };
 
   return (
-    <Box className="App" sx={{ height: "100%", overflowY: "hidden" }}>
-      <AppBar position="static" sx={{ height: "96px" }}>
-        <Toolbar variant="dense" sx={{ py: "18px", px: "36px" }}>
+    <div className="App" style={{ height: "100%", overflowY: "hidden" }}>
+      <header className="primary-container fixed">
+        <nav>
           {websiteData?.imageUrl && (
             <img
-              src={websiteData?.imageUrl}
               alt="logo"
-              width="60px"
-              height="60px"
+              className="round medium"
+              src={websiteData?.imageUrl}
             />
           )}
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{
-              flexGrow: 1,
-              fontSize: "24px",
-              fontWeight: "bold",
-              ml: "12px",
-            }}
-          >
-            {websiteData?.name}
-          </Typography>
-          <IconButton color="inherit" aria-label="menu">
-            <HeadsetMicIcon />
-          </IconButton>
-          <IconButton
-            color="inherit"
-            aria-label="menu"
+          <h5 className="max">{websiteData?.name}</h5>
+          <button aria-label="contact" className="circle transparent">
+            <i>headset_mic</i>
+          </button>
+          <button
+            aria-label="close"
+            className="circle transparent"
             onClick={() => {
               window.parent.postMessage("close", "*");
             }}
           >
-            <CloseIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-      <Box
+            <i>close</i>
+          </button>
+        </nav>
+      </header>
+      <main
+        className="scroll"
         ref={scrollRef}
-        sx={{ overflowY: "auto", height: "calc(100% - 176px)" }}
+        style={{ height: "calc(100% - 144px)" }}
       >
-        <Typography
-          component="div"
-          mb="29px"
-          mt="23px"
-          mx="30px"
-          textAlign="center"
-          fontSize="12px"
-          color="#A0A0A0"
-        >
-          {websiteData?.disclaimer}
-        </Typography>
+        <div className="no-line center-align">
+          <p
+            className="medium-text"
+            style={{
+              margin: "23px 30px 29px",
+              color: "#A0A0A0",
+            }}
+          >
+            {websiteData?.disclaimer}
+          </p>
+        </div>
         {messages.map((message) =>
           message.children.length === 1 ? (
             <ChatBubble
@@ -160,45 +146,39 @@ const App = () => {
             ))
           )
         )}
-      </Box>
-      <Box
-        sx={{
-          height: "80px",
-          backgroundColor: "transparent",
-          px: "30px",
-          py: "16px",
-          display: "flex",
-          borderTop: "1px solid #A0A0A0",
-        }}
-      >
-        <Box sx={{ flexGrow: 1 }}>
-          <TextField
-            fullWidth
-            placeholder="메시지를 입력하세요"
-            size="small"
-            value={message}
-            onChange={(e) => {
-              setMessage(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSendMessage();
-              }
-            }}
-          />
-        </Box>
-        <Box>
-          <IconButton
-            color="inherit"
-            aria-label="menu"
+      </main>
+      <footer className="fixed fill">
+        <nav className="no-space">
+          <div className="max field label  border small left-round">
+            <input
+              onChange={(e) => {
+                setMessage(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSendMessage();
+                }
+              }}
+              type="text"
+              value={message}
+            />
+            <label>메시지를 입력하세요</label>
+          </div>
+          <button
+            aria-label="send"
+            className="right-round"
             disabled={!message}
             onClick={handleSendMessage}
           >
-            <SendIcon fontSize="large" />
-          </IconButton>
-        </Box>
-      </Box>
-    </Box>
+            <i>send</i>
+          </button>
+        </nav>
+      </footer>
+      <div className="snackbar error" id="snackbar">
+        <i>warning</i>
+        <span>{errorMessage}</span>
+      </div>
+    </div>
   );
 };
 
