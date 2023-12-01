@@ -1,5 +1,6 @@
 /* eslint-disable max-len */
 import * as admin from "firebase-admin";
+import * as cors from "cors";
 import * as express from "express";
 import * as functions from "firebase-functions/v2/https";
 import {ResourceName} from "./resources/resource";
@@ -24,6 +25,8 @@ import {getMessage,
 
 admin.initializeApp();
 export const app = express();
+
+app.use(cors({origin: true}));
 
 app.get(`/${ResourceName.Websites}/:website_id`, getWebsite);
 app.post(`/${ResourceName.Websites}`, postWebsite);

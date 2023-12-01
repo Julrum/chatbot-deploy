@@ -1,10 +1,11 @@
 # Compiled JavaScript files
 # https://github.com/GoogleCloudPlatform/functions-framework-nodejs/issues/303#issuecomment-885728587
-lib/**/*.js
-lib/**/*.js.map
 
 # TypeScript v1 declaration files
 typings/
 
 # Node.js dependency directory
 node_modules/
+
+# Puppeteer cache directory
+.cache/**

@@ -1,0 +1,30 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.chat = exports.app = void 0;
+/* eslint-disable max-len */
+const admin = require("firebase-admin");
+const cors = require("cors");
+const express = require("express");
+const functions = require("firebase-functions/v2/https");
+const resource_1 = require("./resources/resource");
+const websites_1 = require("./handlers/websites");
+const sessions_1 = require("./handlers/sessions");
+const messages_1 = require("./handlers/messages");
+admin.initializeApp();
+exports.app = express();
+exports.app.use(cors({ origin: true }));
+exports.app.get(`/${resource_1.ResourceName.Websites}/:website_id`, websites_1.getWebsite);
+exports.app.post(`/${resource_1.ResourceName.Websites}`, websites_1.postWebsite);
+exports.app.get(`/${resource_1.ResourceName.Websites}`, websites_1.listWebsites);
+exports.app.delete(`/${resource_1.ResourceName.Websites}/:website_id`, websites_1.deleteWebsite);
+exports.app.get(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}/:session_id`, sessions_1.getSession);
+exports.app.post(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}`, sessions_1.postSession);
+exports.app.get(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}`, sessions_1.listSessions);
+exports.app.delete(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}/:session_id`, sessions_1.deleteSession);
+exports.app.get(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}/:session_id/${resource_1.ResourceName.Messages}/:message_id`, messages_1.getMessage);
+exports.app.post(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}/:session_id/${resource_1.ResourceName.Messages}/`, messages_1.postMessage);
+exports.app.get(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}/:session_id/${resource_1.ResourceName.Messages}`, messages_1.listMessages);
+exports.app.delete(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}/:session_id/${resource_1.ResourceName.Messages}/:message_id`, messages_1.deleteMessage);
+exports.app.get(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}/:session_id/${resource_1.ResourceName.Messages}/:message_id/reply`, messages_1.getReply);
+exports.chat = functions.onRequest(exports.app);
+//# sourceMappingURL=index.js.map

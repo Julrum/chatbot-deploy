@@ -86,25 +86,61 @@ interface Document {
 // POST /collections/1234/documents/
 app.post("/collections/:collectionId/documents",
   async (req, res) => {
+    logger.debug("POST /collections/:collectionId/documents called.");
     const {collectionId} = req.params;
     const documents: Document[] = req.body.documents;
     const ids = documents.map((doc) => doc.id);
     const metadatas = documents.map((doc) => doc.metadata);
     const contents = documents.map((doc) => doc.content);
 
-    const openaiAPIKey = await accessOpenAIAPIKey();
+    let openaiAPIKey: string;
+    try {
+      openaiAPIKey = await accessOpenAIAPIKey();
+    } catch (e) {
+      res.status(500).send("Failed to access openai api key.");
+      return;
+    }
     const embeddingFunction = new OpenAIEmbeddingFunction({
       openai_api_key: openaiAPIKey,
     });
+    let collection: Collection;
     try {
-      const collection = await client.getCollection({
+      collection = await client.getCollection({
         name: collectionId,
-        embeddingFunction,
+        // embeddingFunction,
       });
+    } catch (e) {
+      logger.error(`Failed to get collection: ${e}`);
+      res.status(404).send(`Collection "${collectionId}" not found.`);
+      return;
+    }
+    try {
+      if (ids.length == 0) {
+        res.status(400)
+          .send("At least one document should be provided, got 0.");
+        return;
+      }
+      if (ids.length != metadatas.length || ids.length != contents.length) {
+        res.status(500).send(`\
+        length of ids(${ids.length}), \
+        metadatas(${metadatas.length}), \
+        contents(${contents.length}) \
+        should be the same.`);
+        return;
+      }
+      let embeddings: number[][];
+      try {
+        embeddings = await embeddingFunction.generate(contents);
+      } catch (e) {
+        logger.error(`Failed to generate embeddings: ${e}`);
+        res.status(500).send(`Failed to generate embeddings: ${e}`);
+        return;
+      }
       const results = await collection.add({
         ids: ids,
         metadatas: metadatas,
         documents: contents,
+        embeddings: embeddings,
       });
       if (!results) {
         res.status(500).send("Failed to add documents.");
@@ -112,7 +148,8 @@ app.post("/collections/:collectionId/documents",
       }
       res.status(200).send(`Successfully added ${documents.length} documents.`);
     } catch (e) {
-      res.status(404).send(`Collection "${collectionId}" not found.`);
+      logger.error(`Failed to add documents: ${e}`);
+      res.status(500).send(`Failed to add documents: ${e}`);
     }
   });
 // GET /collections/1234/documents/some-doc-id

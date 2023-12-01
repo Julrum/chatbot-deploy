@@ -1,5 +1,5 @@
 import {Request, Response} from "express";
-import {messagesCollection, Message} from "../resources/messages";
+import {messagesCollection, Message, MessageRole} from "../resources/messages";
 import {HttpsError} from "firebase-functions/v2/https";
 
 /**
@@ -107,10 +107,15 @@ export async function getReply(req: Request, res: Response): Promise<void> {
     id: "invalid-id",
     createdAt: new Date(),
     deletedAt: null,
-    title: "Hello",
-    content: `Replying at ${new Date().toISOString()}`,
-    imageUrl: "https://img.vogue.co.kr/vogue/2023/08/style_64e6cac3ba0cd.jpeg",
-    url: "https://startup.hanyang.ac.kr/",
+    children: [
+      {
+        title: "Hello",
+        role: MessageRole.assistant,
+        content: `Replying at ${new Date().toISOString()}`,
+        imageUrl: "https://img.vogue.co.kr/vogue/2023/08/style_64e6cac3ba0cd.jpeg",
+        url: "https://startup.hanyang.ac.kr/",
+      },
+    ],
   };
   res.status(200).send(message);
 }

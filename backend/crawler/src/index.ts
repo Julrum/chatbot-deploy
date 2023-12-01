@@ -5,33 +5,53 @@ import {initializeApp} from "firebase-admin/app";
 import * as express from "express";
 import {crawlThreads} from "./crawl";
 import {
-  splitThreadsByContentLength,
-} from "./thread_util";
-import {
-  CrawlConfig, Document, Metadata,
+  CrawlConfig, Document, Metadata, Thread,
 } from "./model";
 import axios from "axios";
 
 initializeApp();
 const app = express();
-app.post("/", (req, res) => {
-  logger.info("Hello logs!", {structuredData: true});
-  res.send("Hello from Firebase!");
-});
+app.use(express.json());
+app.use(express.urlencoded( {extended: false} ));
 app.post("/crawl", async (req, res) => {
   const crawlConfig: CrawlConfig = req.body;
+  // TODO: Fix chromaBaseUrl and chromaCollectionId
+  // to be configurable by env vars.
   const chromaBaseUrl = "https://chroma-z5eqvjec2q-uc.a.run.app";
-  const chromaCollectionId = "chroma-api-test";
-  const threads = await crawlThreads({
-    maxPage: crawlConfig.maxPage,
-    maxRetry: crawlConfig.maxRetry,
-    startDate: new Date(crawlConfig.startDate),
-    endDate: new Date(crawlConfig.endDate),
-  });
-  const splittedThreads = splitThreadsByContentLength(
-    threads,
-    crawlConfig.maxContentLength,
-  );
+  const chromaCollectionId = crawlConfig.collectionName;
+
+  let threads: Thread[] = [];
+  try {
+    threads = await crawlThreads({
+      maxPage: crawlConfig.maxPage,
+      startDate: new Date(crawlConfig.startDate),
+      endDate: new Date(crawlConfig.endDate),
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      logger.error(e);
+      res.status(500).send(`Failed to crawl threads. \
+      name=${e.name}, message=${e.message}, stack=${e.stack}`);
+    } else {
+      res.status(500).send(`Failed to crawl threads. ${e}`);
+    }
+  }
+  const splittedThreads: Thread[] = [];
+  for (const thread of threads) {
+    for (let i = 0;
+      i < thread.content.length;
+      i += crawlConfig.maxContentLength) {
+      const splittedThread = {
+        ...thread,
+        offset: i,
+        content: thread.content.slice(i, i + crawlConfig.maxContentLength),
+      };
+      splittedThreads.push(splittedThread);
+    }
+  }
+
+  logger.debug(`Splitted ${threads.length} threads into \
+    ${splittedThreads.length} threads.`);
   const documents: Document[] = splittedThreads.map((thread) => ({
     id: `${thread.id}-${thread.offset}`,
     metadata: {
@@ -42,18 +62,45 @@ app.post("/crawl", async (req, res) => {
     } as Metadata,
     content: thread.content,
   }));
+  logger.debug(`Sending ${documents.length} documents to Chroma API.`);
+  logger.debug(`documents=${JSON.stringify({
+    documents: documents,
+  })}`);
+
+  logger.debug(
+    `POST ${chromaBaseUrl}/collections/${chromaCollectionId}/documents`);
+
   const chromaRes = await axios.post(
     `${chromaBaseUrl}/collections/${chromaCollectionId}/documents`,
     {
       documents: documents,
     },
   );
-  if (chromaRes.status !== 200) {
-    res.status(500).send(
-      `Failed to crawl threads. ${chromaRes.data}`,
-    );
+
+  logger.debug(`Chroma API response: ${chromaRes.status}`);
+
+  switch (chromaRes.status) {
+  case 200:
+    logger.info(`Successfully crawled ${threads.length} threads.`);
+    res.status(200).send(`Successfully crawled ${threads.length} threads.`);
+    break;
+  default:
+    logger.error(`Failed to crawl threads, Chroma API returned \
+      status=${chromaRes.status}`);
+    res.status(500).send(`Failed to crawl threads. Chroma API ended with \
+      status=${chromaRes.status}`);
+    // logger.error(`Failed to crawl threads. \
+    //   status=${chromaRes.status}, data=${chromaRes.data}`);
+    // res.status(500).send(`Failed to crawl threads. Chroma API ended with \
+    //   status=${chromaRes.status}, data=${chromaRes.data}`);
     return;
   }
-  res.status(200).send(`Successfully crawled ${threads.length} threads.`);
 });
+
+// Only for local testing.
+// app.listen(8080, () => {
+//   logger.info("Crawler started listening on port 8080.");
+// }
+// );
+
 export const crawler = onRequest(app);

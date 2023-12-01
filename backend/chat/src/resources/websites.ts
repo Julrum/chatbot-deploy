@@ -6,6 +6,10 @@ export interface Website extends Resource {
   name: string;
   url: string;
   description: string;
+  imageUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  disclaimer?: string;
 }
 
 export const websiteCollection: Collection<Website> = {

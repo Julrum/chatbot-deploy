@@ -28,6 +28,8 @@ export interface CrawlConfig {
   startDate: string;
   endDate: string;
   maxContentLength: number;
+  maxRecursionDepth: number;
+  collectionName: string;
 }
 
 
