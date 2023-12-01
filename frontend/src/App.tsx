@@ -109,7 +109,13 @@ const App = () => {
           <IconButton color="inherit" aria-label="menu">
             <HeadsetMicIcon />
           </IconButton>
-          <IconButton color="inherit" aria-label="menu">
+          <IconButton
+            color="inherit"
+            aria-label="menu"
+            onClick={() => {
+              window.parent.postMessage("close", "*");
+            }}
+          >
             <CloseIcon />
           </IconButton>
         </Toolbar>
