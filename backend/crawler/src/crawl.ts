@@ -108,22 +108,21 @@ async function extractThread(
     }
   }
   try {
-    const titleAndDate = await page.evaluate(async () => {
-      const titleElements = await document.querySelectorAll(
-        "#wrap > div.container > section > div > \
-        div > div");
-      if (titleElements.length == 0) {
-        throw new Error(
-          `Failed to find CSS selector: 
+    const titleAndDate = await page.$$eval(
+      "[class^=\"board_topTitleArea\"]", (elements) => {
+        if (elements.length == 0) {
+          throw new Error(
+            `Failed to find CSS selector: 
           ${"#wrap > div.container > section > div > \
           div > div.board_topTitleArea__FYnYL"}`);
-      }
-      const titleAndDateElement = titleElements[0];
-      return {
-        title: titleAndDateElement.children[0].innerHTML,
-        date: titleAndDateElement.children[1].innerHTML,
-      };
-    });
+        }
+        const titleElement = elements[0].children[0];
+        const dateElement = elements[0].children[1];
+        return {
+          title: titleElement.innerHTML,
+          date: dateElement.innerHTML,
+        };
+      });
     const ckContentTexts = await page.$$eval(".ck-content", (elements) =>
       elements.map((element) => {
         const recursivelyGetTexts = (
@@ -185,6 +184,26 @@ async function extractThread(
   }
 }
 
+/**
+ * @param {ThreadLink[]} links thread links in the board.
+ * @param {Set<number>} idCache cache of ids.
+ * @return {ThreadLink[]} thread links that are not in the cache
+ */
+function getOnlyUnseenThreads(
+  links: ThreadLink[], idCache: Set<number>): ThreadLink[] {
+  const parsedIds = links.map((v) => extractIdFromUrl(v.url));
+  parsedIds.forEach((v, i) => {
+    if (v === null) {
+      throw new Error(`Failed to extract ids from ${links[i].url}`);
+    }
+  });
+  const ids = parsedIds as number[];
+  const unseenIds = ids.filter((v) => !idCache.has(v));
+  const unseenLinks = links.filter((v) => unseenIds.includes(
+    extractIdFromUrl(v.url) as number));
+  return unseenLinks;
+}
+
 
 /**
  *
@@ -200,27 +219,35 @@ async function extractLinks(
     startDate: Date; endDate: Date;
   }): Promise<ThreadLink[]> {
   const allLinks: ThreadLink[] = [];
-  let reachedStartDate = false;
-  for (let currentPage = 1;
-    !reachedStartDate && currentPage <= maxPage;
-    currentPage++) {
+  const idCache = new Set<number>();
+  for (let currentPage = 1; currentPage <= maxPage; currentPage++) {
     const url = `https://startup.hanyang.ac.kr/board/notice/list?boardName=notice&page=${currentPage}`;
     const links = await extractLinksInBoard(browser, url);
-    if (links.length == 0) {
-      logger.info(`No more links in page ${currentPage}, exiting loop.`);
-      break;
-    }
+    const unseenLinks = getOnlyUnseenThreads(links, idCache);
+    unseenLinks.forEach((v) => idCache.add(extractIdFromUrl(v.url) as number));
     // Since the BBS is sorted by date in descending order,
     // we first filter out links before the end date,
     // then filter out links after the start date.
-    const sortedLinks = links.sort(
+    const sortedLinks = unseenLinks.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const linksBeforeEndDate = sortedLinks.filter(
       (v) => new Date(v.date) <= endDate);
+    if (linksBeforeEndDate.length === 0) {
+      logger.debug("Not reached the end date, continuing.");
+      continue;
+    }
     const linksAfterStartDate = linksBeforeEndDate.filter(
       (v) => new Date(v.date) >= startDate);
-    reachedStartDate = linksAfterStartDate.length < linksBeforeEndDate.length;
     allLinks.push(...linksAfterStartDate);
+
+    logger.debug(`sortedLinks.length=${sortedLinks.length} -> \
+    linksBeforeEndDate.length=${linksBeforeEndDate.length} -> \
+    linksAfterStartDate.length=${linksAfterStartDate.length}
+    `);
+
+    if (linksAfterStartDate.length < linksBeforeEndDate.length) {
+      break;
+    }
   }
   return allLinks;
 }
@@ -240,6 +267,7 @@ export async function crawlThreads({
   try {
     const links = await extractLinks({
       browser, maxPage, startDate, endDate});
+    logger.debug(`Extracted ${links.length} links.`);
     const threads = await Promise.all(links.map(async (v) =>
       extractThread(browser, v)
     ).filter((v) => v !== null)) as Thread[];

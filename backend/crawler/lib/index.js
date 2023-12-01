@@ -55,14 +55,40 @@ app.post("/crawl", async (req, res) => {
         },
         content: thread.content,
     }));
-    firebase_functions_1.logger.debug(`Sending ${documents.length} documents to Chroma API.`);
-    firebase_functions_1.logger.debug(`documents=${JSON.stringify({
-        documents: documents,
-    })}`);
+    // logger.debug(`Sending ${documents.length} documents to Chroma API.`);
+    // logger.debug(`documents=${JSON.stringify({
+    //   documents: documents,
+    // })}`);
+    // res.status(200).send(`Crawled ${threads.length} threads.`);
+    // return;
+    if (documents.length == 0) {
+        const err = `No documents to send to Chroma API. \
+    # of threads=${threads.length}, \
+    # of splitted threads=${splittedThreads.length}, \
+    # of documents=${documents.length}`;
+        firebase_functions_1.logger.error(err);
+        res.status(500).send(err);
+        return;
+    }
     firebase_functions_1.logger.debug(`POST ${chromaBaseUrl}/collections/${chromaCollectionId}/documents`);
-    const chromaRes = await axios_1.default.post(`${chromaBaseUrl}/collections/${chromaCollectionId}/documents`, {
-        documents: documents,
-    });
+    let chromaRes;
+    try {
+        chromaRes = await axios_1.default.post(`${chromaBaseUrl}/collections/${chromaCollectionId}/documents`, {
+            documents: documents,
+        });
+    }
+    catch (e) {
+        if (e instanceof Error) {
+            firebase_functions_1.logger.error(e);
+            res.status(500).send(`Failed to send documents to Chroma API. \
+      name=${e.name}, message=${e.message}, stack=${e.stack}`);
+        }
+        else {
+            firebase_functions_1.logger.error(`Failed to send documents to Chroma API. ${e}`);
+            res.status(500).send(`Failed to send documents to Chroma API. ${e}`);
+        }
+        return;
+    }
     firebase_functions_1.logger.debug(`Chroma API response: ${chromaRes.status}`);
     switch (chromaRes.status) {
         case 200:
@@ -82,9 +108,8 @@ app.post("/crawl", async (req, res) => {
     }
 });
 // Only for local testing.
-// app.listen(8080, () => {
-//   logger.info("Crawler started listening on port 8080.");
-// }
-// );
+app.listen(8080, () => {
+    firebase_functions_1.logger.info("Crawler started listening on port 8080.");
+});
 exports.crawler = (0, https_1.onRequest)(app);
 //# sourceMappingURL=index.js.map

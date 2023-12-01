@@ -103,18 +103,17 @@ async function extractThread(browser, link) {
         }
     }
     try {
-        const titleAndDate = await page.evaluate(async () => {
-            const titleElements = await document.querySelectorAll("#wrap > div.container > section > div > \
-        div > div");
-            if (titleElements.length == 0) {
+        const titleAndDate = await page.$$eval("[class^=\"board_topTitleArea\"]", (elements) => {
+            if (elements.length == 0) {
                 throw new Error(`Failed to find CSS selector: 
           ${"#wrap > div.container > section > div > \
           div > div.board_topTitleArea__FYnYL"}`);
             }
-            const titleAndDateElement = titleElements[0];
+            const titleElement = elements[0].children[0];
+            const dateElement = elements[0].children[1];
             return {
-                title: titleAndDateElement.children[0].innerHTML,
-                date: titleAndDateElement.children[1].innerHTML,
+                title: titleElement.innerHTML,
+                date: dateElement.innerHTML,
             };
         });
         const ckContentTexts = await page.$$eval(".ck-content", (elements) => elements.map((element) => {
@@ -176,6 +175,23 @@ async function extractThread(browser, link) {
     }
 }
 /**
+ * @param {ThreadLink[]} links thread links in the board.
+ * @param {Set<number>} idCache cache of ids.
+ * @return {ThreadLink[]} thread links that are not in the cache
+ */
+function getOnlyUnseenThreads(links, idCache) {
+    const parsedIds = links.map((v) => extractIdFromUrl(v.url));
+    parsedIds.forEach((v, i) => {
+        if (v === null) {
+            throw new Error(`Failed to extract ids from ${links[i].url}`);
+        }
+    });
+    const ids = parsedIds;
+    const unseenIds = ids.filter((v) => !idCache.has(v));
+    const unseenLinks = links.filter((v) => unseenIds.includes(extractIdFromUrl(v.url)));
+    return unseenLinks;
+}
+/**
  *
  * @param {Browser} browser puppeteer browser instance.
  * @param {number} maxPage maximum number of pages to crawl.
@@ -185,22 +201,30 @@ async function extractThread(browser, link) {
  */
 async function extractLinks({ browser, maxPage, startDate, endDate }) {
     const allLinks = [];
-    let reachedStartDate = false;
-    for (let currentPage = 1; !reachedStartDate && currentPage <= maxPage; currentPage++) {
+    const idCache = new Set();
+    for (let currentPage = 1; currentPage <= maxPage; currentPage++) {
         const url = `https://startup.hanyang.ac.kr/board/notice/list?boardName=notice&page=${currentPage}`;
         const links = await extractLinksInBoard(browser, url);
-        if (links.length == 0) {
-            firebase_functions_1.logger.info(`No more links in page ${currentPage}, exiting loop.`);
-            break;
-        }
+        const unseenLinks = getOnlyUnseenThreads(links, idCache);
+        unseenLinks.forEach((v) => idCache.add(extractIdFromUrl(v.url)));
         // Since the BBS is sorted by date in descending order,
         // we first filter out links before the end date,
         // then filter out links after the start date.
-        const sortedLinks = links.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const sortedLinks = unseenLinks.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         const linksBeforeEndDate = sortedLinks.filter((v) => new Date(v.date) <= endDate);
+        if (linksBeforeEndDate.length === 0) {
+            firebase_functions_1.logger.debug("Not reached the end date, continuing.");
+            continue;
+        }
         const linksAfterStartDate = linksBeforeEndDate.filter((v) => new Date(v.date) >= startDate);
-        reachedStartDate = linksAfterStartDate.length < linksBeforeEndDate.length;
         allLinks.push(...linksAfterStartDate);
+        firebase_functions_1.logger.debug(`sortedLinks.length=${sortedLinks.length} -> \
+    linksBeforeEndDate.length=${linksBeforeEndDate.length} -> \
+    linksAfterStartDate.length=${linksAfterStartDate.length}
+    `);
+        if (linksAfterStartDate.length < linksBeforeEndDate.length) {
+            break;
+        }
     }
     return allLinks;
 }
@@ -217,6 +241,7 @@ async function crawlThreads({ maxPage, startDate, endDate }) {
         const links = await extractLinks({
             browser, maxPage, startDate, endDate
         });
+        firebase_functions_1.logger.debug(`Extracted ${links.length} links.`);
         const threads = await Promise.all(links.map(async (v) => extractThread(browser, v)).filter((v) => v !== null));
         await browser.close();
         return threads;

@@ -7,6 +7,7 @@ import {crawlThreads} from "./crawl";
 import {
   CrawlConfig, Document, Metadata, Thread,
 } from "./model";
+import {AxiosResponse} from "axios";
 import axios from "axios";
 
 initializeApp();
@@ -62,20 +63,45 @@ app.post("/crawl", async (req, res) => {
     } as Metadata,
     content: thread.content,
   }));
-  logger.debug(`Sending ${documents.length} documents to Chroma API.`);
-  logger.debug(`documents=${JSON.stringify({
-    documents: documents,
-  })}`);
+  // logger.debug(`Sending ${documents.length} documents to Chroma API.`);
+  // logger.debug(`documents=${JSON.stringify({
+  //   documents: documents,
+  // })}`);
+
+  // res.status(200).send(`Crawled ${threads.length} threads.`);
+  // return;
+  if (documents.length == 0) {
+    const err = `No documents to send to Chroma API. \
+    # of threads=${threads.length}, \
+    # of splitted threads=${splittedThreads.length}, \
+    # of documents=${documents.length}`;
+    logger.error(err);
+    res.status(500).send(err);
+    return;
+  }
 
   logger.debug(
     `POST ${chromaBaseUrl}/collections/${chromaCollectionId}/documents`);
 
-  const chromaRes = await axios.post(
-    `${chromaBaseUrl}/collections/${chromaCollectionId}/documents`,
-    {
-      documents: documents,
-    },
-  );
+  let chromaRes: AxiosResponse;
+  try {
+    chromaRes = await axios.post(
+      `${chromaBaseUrl}/collections/${chromaCollectionId}/documents`,
+      {
+        documents: documents,
+      },
+    );
+  } catch (e) {
+    if (e instanceof Error) {
+      logger.error(e);
+      res.status(500).send(`Failed to send documents to Chroma API. \
+      name=${e.name}, message=${e.message}, stack=${e.stack}`);
+    } else {
+      logger.error(`Failed to send documents to Chroma API. ${e}`);
+      res.status(500).send(`Failed to send documents to Chroma API. ${e}`);
+    }
+    return;
+  }
 
   logger.debug(`Chroma API response: ${chromaRes.status}`);
 
@@ -98,9 +124,9 @@ app.post("/crawl", async (req, res) => {
 });
 
 // Only for local testing.
-// app.listen(8080, () => {
-//   logger.info("Crawler started listening on port 8080.");
-// }
-// );
+app.listen(8080, () => {
+  logger.info("Crawler started listening on port 8080.");
+}
+);
 
 export const crawler = onRequest(app);
