@@ -90,7 +90,9 @@ const App = () => {
               src={websiteData?.imageUrl}
             />
           )}
-          <h5 className="max">{websiteData?.name}</h5>
+          <p className="max" style={{ fontSize: "18px" }}>
+            {websiteData?.name}
+          </p>
           <button aria-label="contact" className="circle transparent">
             <i>headset_mic</i>
           </button>
