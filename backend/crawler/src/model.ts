@@ -23,10 +23,9 @@ export interface Thread {
   imageUrls: string[];
 }
 export interface CrawlConfig {
-  maxPage: number;
+  minId: number;
+  maxId: number;
   maxRetry: number;
-  startDate: string;
-  endDate: string;
   maxContentLength: number;
   maxRecursionDepth: number;
   collectionName: string;

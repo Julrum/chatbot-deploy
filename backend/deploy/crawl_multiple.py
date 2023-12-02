@@ -9,11 +9,11 @@ request_body_base = {
     "maxRetry": 3,
     "host": "http://10.128.0.4",
     "port": 8000,
-    "collectionName": "crawl-remote-test",
+    "collectionName": "hyu-startup-notice",
     "maxContentLength": 200,
     "maxRecursionDepth": 3
 }
-start_date = "2023-09-01"
+start_date = "2022-01-01"
 end_date = "2023-12-31"
 start_dates = pd.date_range(start=start_date, end=end_date, freq="MS").strftime("%Y-%m-%d").tolist()
 end_dates = pd.date_range(start=start_date, end=end_date, freq="M").strftime("%Y-%m-%d").tolist()

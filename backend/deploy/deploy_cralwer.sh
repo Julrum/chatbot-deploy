@@ -11,5 +11,6 @@ gcloud functions deploy crawler \
         --entry-point crawler \
         --source ../crawler \
         --memory 2048MB \
-        --quiet
+        --quiet \
+        --timeout 300s
 mv ../crawler/.gitignore.bak ../crawler/.gitignore

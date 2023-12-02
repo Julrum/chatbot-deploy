@@ -7,8 +7,7 @@ import {crawlThreads} from "./crawl";
 import {
   CrawlConfig, Document, Metadata, Thread,
 } from "./model";
-import {AxiosResponse} from "axios";
-import axios from "axios";
+import axios, {AxiosResponse} from "axios";
 
 initializeApp();
 const app = express();
@@ -23,11 +22,8 @@ app.post("/crawl", async (req, res) => {
 
   let threads: Thread[] = [];
   try {
-    threads = await crawlThreads({
-      maxPage: crawlConfig.maxPage,
-      startDate: new Date(crawlConfig.startDate),
-      endDate: new Date(crawlConfig.endDate),
-    });
+    threads = await crawlThreads(
+      crawlConfig.minId, crawlConfig.maxId, crawlConfig.maxRetry);
   } catch (e) {
     if (e instanceof Error) {
       logger.error(e);
@@ -124,9 +120,9 @@ app.post("/crawl", async (req, res) => {
 });
 
 // Only for local testing.
-app.listen(8080, () => {
-  logger.info("Crawler started listening on port 8080.");
-}
-);
+// app.listen(8080, () => {
+//   logger.info("Crawler started listening on port 8080.");
+// }
+// );
 
 export const crawler = onRequest(app);

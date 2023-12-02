@@ -20,11 +20,7 @@ app.post("/crawl", async (req, res) => {
     const chromaCollectionId = crawlConfig.collectionName;
     let threads = [];
     try {
-        threads = await (0, crawl_1.crawlThreads)({
-            maxPage: crawlConfig.maxPage,
-            startDate: new Date(crawlConfig.startDate),
-            endDate: new Date(crawlConfig.endDate),
-        });
+        threads = await (0, crawl_1.crawlThreads)(crawlConfig.minId, crawlConfig.maxId, crawlConfig.maxRetry);
     }
     catch (e) {
         if (e instanceof Error) {
@@ -108,8 +104,9 @@ app.post("/crawl", async (req, res) => {
     }
 });
 // Only for local testing.
-app.listen(8080, () => {
-    firebase_functions_1.logger.info("Crawler started listening on port 8080.");
-});
+// app.listen(8080, () => {
+//   logger.info("Crawler started listening on port 8080.");
+// }
+// );
 exports.crawler = (0, https_1.onRequest)(app);
 //# sourceMappingURL=index.js.map
