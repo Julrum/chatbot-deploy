@@ -2,10 +2,10 @@ import styled from "styled-components";
 
 import type { ChildMessageProps } from "../types/message";
 
-const Bubble = styled.article<{ isCard: boolean }>`
+const Bubble = styled.article<{ $isCard: boolean }>`
   box-shadow: none;
-  cursor: ${({ isCard }) => (isCard ? "pointer" : "default")};
-  width: ${({ isCard }) => (isCard ? "100%" : "fit-content")};
+  cursor: ${({ $isCard }) => ($isCard ? "pointer" : "default")};
+  width: ${({ $isCard }) => ($isCard ? "100%" : "fit-content")};
   word-break: break-word;
   max-width: 400px;
 `;
@@ -17,16 +17,16 @@ const Image = styled.img`
   width: 100%;
 `;
 
-const TextBlock = styled.div<{ isCard: boolean }>`
-  padding: ${({ isCard }) => (isCard ? "14px 16px" : "10px 16px")};
+const TextBlock = styled.div<{ $isCard: boolean }>`
+  padding: ${({ $isCard }) => ($isCard ? "14px 16px" : "10px 16px")};
 `;
 
 const Title = styled.h6`
   font-size: 14px;
 `;
 
-const Content = styled.p<{ isCard: boolean }>`
-  font-size: ${({ isCard }) => (isCard ? "12px" : "16px")};
+const Content = styled.p<{ $isCard: boolean }>`
+  font-size: ${({ $isCard }) => ($isCard ? "12px" : "16px")};
 `;
 
 const ChatBubble = ({
@@ -45,7 +45,7 @@ const ChatBubble = ({
         role === "user" ? "primary-container" : "fill"
       }`}
       onClick={url ? () => window.open(url, "_blank") : undefined}
-      isCard={isCard}
+      $isCard={isCard}
     >
       {isCard && (
         <Image
@@ -55,9 +55,9 @@ const ChatBubble = ({
           src={imageUrl ?? defaultImage}
         />
       )}
-      <TextBlock isCard={isCard}>
+      <TextBlock $isCard={isCard}>
         {title && <Title>{title}</Title>}
-        <Content className="no-line no-margin" isCard={isCard}>
+        <Content className="no-line no-margin" $isCard={isCard}>
           {content}
         </Content>
       </TextBlock>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Carousel from "react-slick";
 import styled from "styled-components";
 
 import { getMessages, getReply, sendMessage } from "./api/message";
@@ -12,6 +13,8 @@ import Timestamp from "./components/Timestamp";
 import type { MessageProps } from "./types/message";
 import type { WebsiteProps } from "./types/website";
 
+import "./styles/slick.css";
+
 const FooterSpacer = styled.div`
   height: 80px;
   width: 100%;
@@ -24,6 +27,35 @@ const Body = styled.main`
 
   &::-webkit-scrollbar {
     display: none;
+  }
+`;
+
+const MessageContainer = styled.div`
+  display: flex;
+  margin-top: 8px;
+  padding: 0 16px;
+  /* 
+  @keyframes slideUp {
+    from {
+      transform: translateY(100vh);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  animation: slideUp 0.5s ease-in-out; */
+`;
+
+const CarouselContainer = styled.div`
+  margin-top: 8px;
+  width: 100%;
+
+  .slick-list {
+    margin: 0 -8px;
+  }
+  .slick-slide > div {
+    padding: 0 8px;
   }
 `;
 
@@ -121,12 +153,11 @@ const App = () => {
           style={{
             display: "flex",
             flexDirection: "column",
-            padding: "0 16px",
           }}
         >
           {messages.map((message) =>
             message.children.length === 1 ? (
-              <div style={{ display: "flex", marginTop: "8px" }}>
+              <MessageContainer key={message.id}>
                 {message.children[0].role === "user" && (
                   <Timestamp
                     role="user"
@@ -148,25 +179,28 @@ const App = () => {
                     time={message.createdAt._nanoseconds}
                   />
                 )}
-              </div>
+              </MessageContainer>
             ) : (
-              <div style={{ display: "flex", marginTop: "8px" }}>
-                {message.children.map((childMessage, index) => (
-                  <ChatBubble
-                    content={childMessage.content}
-                    defaultImage={websiteData?.imageUrl ?? ""}
-                    imageUrl={childMessage.imageUrl}
-                    key={`${message.id}_${index}`}
-                    role={childMessage.role}
-                    title={childMessage.title}
-                    url={childMessage.url}
-                  />
-                ))}
-                <Timestamp
-                  role="assistant"
-                  time={message.createdAt._nanoseconds}
-                />
-              </div>
+              <CarouselContainer key={message.id}>
+                <Carousel
+                  arrows={false}
+                  centerMode
+                  className="center"
+                  infinite={false}
+                >
+                  {message.children.map((childMessage, index) => (
+                    <ChatBubble
+                      content={childMessage.content}
+                      defaultImage={websiteData?.imageUrl ?? ""}
+                      imageUrl={childMessage.imageUrl}
+                      key={`${message.id}_${index}`}
+                      role={childMessage.role}
+                      title={childMessage.title}
+                      url={childMessage.url}
+                    />
+                  ))}
+                </Carousel>
+              </CarouselContainer>
             )
           )}
         </div>
