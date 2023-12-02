@@ -1,30 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import styled, { css } from "styled-components";
+import styled from "styled-components";
 
 import { getMessages, getReply, sendMessage } from "./api/message";
 import { createSession, getSession } from "./api/session";
 import { getWebsiteData } from "./api/website";
 import ChatBubble from "./components/ChatBubble";
-import { MessageProps } from "./types/message";
-import { WebsiteProps } from "./types/website";
-
-const AppContainer = styled.div`
-  height: 100%;
-  overflow: hidden;
-`;
-
-const Disclaimer = styled.p`
-  color: #a0a0a0;
-  margin: 23px 30px 29px;
-`;
+import Disclaimer from "./components/Disclaimer";
+import Footer from "./components/Footer";
+import Header from "./components/Header";
+import Timestamp from "./components/Timestamp";
+import type { MessageProps } from "./types/message";
+import type { WebsiteProps } from "./types/website";
 
 const FooterSpacer = styled.div`
   height: 80px;
   width: 100%;
-`;
-
-const WebsiteName = styled.p`
-  font-size: 18px;
 `;
 
 const Body = styled.main`
@@ -35,31 +25,6 @@ const Body = styled.main`
   &::-webkit-scrollbar {
     display: none;
   }
-`;
-
-const InputComponent = styled.div<{ isActive: boolean }>`
-  transition: width 150ms ease;
-  width: 100%;
-
-  ${({ isActive }) =>
-    isActive &&
-    css`
-      width: calc(100% - 56px);
-    `}
-`;
-
-const SendButton = styled.button<{ isActive: boolean }>`
-  position: fixed;
-  right: 16px;
-  transform: translateX(200%);
-  transition: background-color 150ms ease 0s, transform 150ms ease 0s;
-
-  ${({ isActive }) =>
-    isActive &&
-    css`
-      transform: translateX(0%);
-      cursor: pointer;
-    `}
 `;
 
 const App = () => {
@@ -148,100 +113,75 @@ const App = () => {
   };
 
   return (
-    <AppContainer>
-      <header className="primary fixed">
-        <nav>
-          {websiteData?.imageUrl && (
-            <img
-              alt="logo"
-              className="round medium"
-              src={websiteData?.imageUrl}
-            />
-          )}
-          <WebsiteName className="max">{websiteData?.name}</WebsiteName>
-          <button aria-label="contact" className="circle transparent">
-            <i>headset_mic</i>
-          </button>
-          <button
-            aria-label="close"
-            className="circle transparent"
-            onClick={() => {
-              window.parent.postMessage("close", "*");
-            }}
-          >
-            <i>close</i>
-          </button>
-        </nav>
-      </header>
+    <div style={{ height: "100%", overflow: "hidden" }}>
+      <Header imageUrl={websiteData?.imageUrl} name={websiteData?.name} />
       <Body className="scroll" ref={scrollRef}>
-        <div className="no-line center-align">
-          <Disclaimer className="medium-text">
-            {websiteData?.disclaimer}
-          </Disclaimer>
+        <Disclaimer>{websiteData?.disclaimer}</Disclaimer>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            padding: "0 16px",
+          }}
+        >
+          {messages.map((message) =>
+            message.children.length === 1 ? (
+              <div style={{ display: "flex", marginTop: "8px" }}>
+                {message.children[0].role === "user" && (
+                  <Timestamp
+                    role="user"
+                    time={message.createdAt._nanoseconds}
+                  />
+                )}
+                <ChatBubble
+                  content={message.children[0].content}
+                  defaultImage={websiteData?.imageUrl ?? ""}
+                  imageUrl={message.children[0].imageUrl}
+                  key={message.id}
+                  role={message.children[0].role}
+                  title={message.children[0].title}
+                  url={message.children[0].url}
+                />
+                {message.children[0].role === "assistant" && (
+                  <Timestamp
+                    role="assistant"
+                    time={message.createdAt._nanoseconds}
+                  />
+                )}
+              </div>
+            ) : (
+              <div style={{ display: "flex", marginTop: "8px" }}>
+                {message.children.map((childMessage, index) => (
+                  <ChatBubble
+                    content={childMessage.content}
+                    defaultImage={websiteData?.imageUrl ?? ""}
+                    imageUrl={childMessage.imageUrl}
+                    key={`${message.id}_${index}`}
+                    role={childMessage.role}
+                    title={childMessage.title}
+                    url={childMessage.url}
+                  />
+                ))}
+                <Timestamp
+                  role="assistant"
+                  time={message.createdAt._nanoseconds}
+                />
+              </div>
+            )
+          )}
         </div>
-        {messages.map((message) =>
-          message.children.length === 1 ? (
-            <ChatBubble
-              content={message.children[0].content}
-              createdAt={message.createdAt._nanoseconds}
-              id={message.id}
-              imageUrl={message.children[0].imageUrl}
-              key={message.id}
-              role={message.children[0].role}
-              url={message.children[0].url}
-            />
-          ) : (
-            message.children.map((childMessage, index) => (
-              <ChatBubble
-                content={childMessage.content}
-                createdAt={message.createdAt._nanoseconds}
-                id={`${message.id}_${index}`}
-                imageUrl={childMessage.imageUrl}
-                key={`${message.id}_${index}`}
-                role={childMessage.role}
-                url={childMessage.url}
-              />
-            ))
-          )
-        )}
         <FooterSpacer />
       </Body>
-      <footer className="fixed large-blur">
-        <nav>
-          <InputComponent
-            className="field border small round"
-            isActive={!!message}
-          >
-            <input
-              onChange={(e) => {
-                setMessage(e.target.value);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSendMessage();
-                }
-              }}
-              type="text"
-              value={message}
-              placeholder="Message"
-            />
-          </InputComponent>
-          <SendButton
-            aria-label="send"
-            className="circle no-padding"
-            disabled={!message}
-            isActive={!!message}
-            onClick={handleSendMessage}
-          >
-            <i>arrow_upward_alt</i>
-          </SendButton>
-        </nav>
-      </footer>
+      <Footer
+        handleSendMessage={handleSendMessage}
+        message={message}
+        setMessage={setMessage}
+      />
       <div className="snackbar error" id="snackbar">
         <i>warning</i>
         <span>{errorMessage}</span>
       </div>
-    </AppContainer>
+    </div>
   );
 };
 

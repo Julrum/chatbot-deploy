@@ -1,76 +1,68 @@
-import { dayFormatter } from "../utils/dayFormatter";
-import { ChildMessageProps } from "../types/message";
+import styled from "styled-components";
+
+import type { ChildMessageProps } from "../types/message";
+
+const Bubble = styled.article<{ isCard: boolean }>`
+  box-shadow: none;
+  cursor: ${({ isCard }) => (isCard ? "pointer" : "default")};
+  width: ${({ isCard }) => (isCard ? "100%" : "fit-content")};
+  word-break: break-word;
+  max-width: 400px;
+`;
+
+const Image = styled.img`
+  border-radius: 2rem 2rem 0 0;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+`;
+
+const TextBlock = styled.div<{ isCard: boolean }>`
+  padding: ${({ isCard }) => (isCard ? "14px 16px" : "10px 16px")};
+`;
+
+const Title = styled.h6`
+  font-size: 14px;
+`;
+
+const Content = styled.p<{ isCard: boolean }>`
+  font-size: ${({ isCard }) => (isCard ? "12px" : "16px")};
+`;
 
 const ChatBubble = ({
   content,
-  createdAt,
-  id,
+  defaultImage,
   imageUrl,
   role,
   title,
   url,
-}: ChildMessageProps & {
-  createdAt: number;
-  id: string;
-}) => (
-  <div
-    style={{
-      display: "flex",
-      padding: "4px 20px",
-    }}
-  >
-    {role === "user" && (
-      <p
-        style={{
-          color: "#808080",
-          flexGrow: 1,
-          margin: "auto 14px 0 0",
-          textAlign: "end",
-        }}
-      >
-        {dayFormatter(createdAt, "LT", { locale: "ko", isZuluTime: true })}
-      </p>
-    )}
-    <article
-      className={`no-padding round ${
-        role === "user" ? "fill" : "primary-container"
+}: ChildMessageProps & { defaultImage: string }) => {
+  const isCard = !!(url || imageUrl || title);
+
+  return (
+    <Bubble
+      className={`no-padding no-margin round ${
+        role === "user" ? "primary-container" : "fill"
       }`}
       onClick={url ? () => window.open(url, "_blank") : undefined}
-      style={{
-        boxShadow: "none",
-        cursor: url ? "pointer" : "default",
-        maxWidth: "70%",
-        width: "fit-content",
-        wordBreak: "break-word",
-      }}
+      isCard={isCard}
     >
-      {imageUrl && (
-        <img
+      {isCard && (
+        <Image
           alt="url preview"
           className="responsive medium"
-          onError={(e) => (e.currentTarget.style.display = "none")}
-          src={imageUrl}
-          style={{ borderRadius: "2rem 2rem 0 0" }}
+          onError={(e) => (e.currentTarget.src = defaultImage)}
+          src={imageUrl ?? defaultImage}
         />
       )}
-      <div style={{ padding: "14px 16px" }}>
-        {title && <h5>{title}</h5>}
-        <p className="no-line no-margin">{content}</p>
-      </div>
-    </article>
-    {role === "assistant" && (
-      <p
-        style={{
-          color: "#808080",
-          flexGrow: 1,
-          margin: "auto 0 0 14px",
-          textAlign: "start",
-        }}
-      >
-        {dayFormatter(createdAt, "LT", { locale: "ko", isZuluTime: true })}
-      </p>
-    )}
-  </div>
-);
+      <TextBlock isCard={isCard}>
+        {title && <Title>{title}</Title>}
+        <Content className="no-line no-margin" isCard={isCard}>
+          {content}
+        </Content>
+      </TextBlock>
+    </Bubble>
+  );
+};
 
 export default ChatBubble;
