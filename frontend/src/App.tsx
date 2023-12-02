@@ -29,7 +29,7 @@ const WebsiteName = styled.p`
 
 const Body = styled.main`
   -ms-overflow-style: none;
-  height: calc(100% - 64px);
+  height: calc(var(--app-height) - 64px);
   scrollbar-width: none;
 
   &::-webkit-scrollbar {
@@ -74,6 +74,11 @@ const App = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--app-height",
+      `${window.innerHeight}px`
+    );
+
     const theme = async (from: string) => {
       await ui("theme", from);
     };
