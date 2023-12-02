@@ -37,11 +37,6 @@ const Body = styled.main`
   }
 `;
 
-const InputBlock = styled.div`
-  display: flex;
-  width: 100%;
-`;
-
 const InputComponent = styled.div<{ isActive: boolean }>`
   transition: width 150ms ease;
   width: 100%;
@@ -58,7 +53,6 @@ const SendButton = styled.button<{ isActive: boolean }>`
   right: 16px;
   transform: translateX(200%);
   transition: background-color 150ms ease 0s, transform 150ms ease 0s;
-  z-index: -1;
 
   ${({ isActive }) =>
     isActive &&
@@ -209,35 +203,33 @@ const App = () => {
       </Body>
       <footer className="fixed large-blur">
         <nav>
-          <InputBlock>
-            <InputComponent
-              className="field border small round"
-              isActive={!!message}
-            >
-              <input
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSendMessage();
-                  }
-                }}
-                type="text"
-                value={message}
-                placeholder="Message"
-              />
-            </InputComponent>
-            <SendButton
-              aria-label="send"
-              className="circle no-padding"
-              disabled={!message}
-              isActive={!!message}
-              onClick={handleSendMessage}
-            >
-              <i>arrow_upward_alt</i>
-            </SendButton>
-          </InputBlock>
+          <InputComponent
+            className="field border small round"
+            isActive={!!message}
+          >
+            <input
+              onChange={(e) => {
+                setMessage(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSendMessage();
+                }
+              }}
+              type="text"
+              value={message}
+              placeholder="Message"
+            />
+          </InputComponent>
+          <SendButton
+            aria-label="send"
+            className="circle no-padding"
+            disabled={!message}
+            isActive={!!message}
+            onClick={handleSendMessage}
+          >
+            <i>arrow_upward_alt</i>
+          </SendButton>
         </nav>
       </footer>
       <div className="snackbar error" id="snackbar">
