@@ -1,13 +1,72 @@
 import { useEffect, useRef, useState } from "react";
+import styled, { css } from "styled-components";
 
 import { getMessages, getReply, sendMessage } from "./api/message";
 import { createSession, getSession } from "./api/session";
 import { getWebsiteData } from "./api/website";
 import ChatBubble from "./components/ChatBubble";
-import { WebsiteProps } from "./types/website";
 import { MessageProps } from "./types/message";
+import { WebsiteProps } from "./types/website";
 
-import "./styles/App.css";
+const AppContainer = styled.div`
+  height: 100%;
+  overflow: hidden;
+`;
+
+const Disclaimer = styled.p`
+  color: #a0a0a0;
+  margin: 23px 30px 29px;
+`;
+
+const FooterSpacer = styled.div`
+  height: 80px;
+  width: 100%;
+`;
+
+const WebsiteName = styled.p`
+  font-size: 18px;
+`;
+
+const Body = styled.main`
+  -ms-overflow-style: none;
+  height: calc(100% - 64px);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const InputBlock = styled.div`
+  display: flex;
+  width: 100%;
+`;
+
+const InputComponent = styled.div<{ isActive: boolean }>`
+  transition: width 150ms ease;
+  width: 100%;
+
+  ${({ isActive }) =>
+    isActive &&
+    css`
+      width: calc(100% - 56px);
+    `}
+`;
+
+const SendButton = styled.button<{ isActive: boolean }>`
+  position: fixed;
+  right: 16px;
+  transform: translateX(200%);
+  transition: background-color 150ms ease 0s, transform 150ms ease 0s;
+  z-index: -1;
+
+  ${({ isActive }) =>
+    isActive &&
+    css`
+      transform: translateX(0%);
+      cursor: pointer;
+    `}
+`;
 
 const App = () => {
   const [errorMessage, setErrorMessage] = useState("");
@@ -90,8 +149,8 @@ const App = () => {
   };
 
   return (
-    <div className="App">
-      <header className="primary-container fixed">
+    <AppContainer>
+      <header className="primary fixed">
         <nav>
           {websiteData?.imageUrl && (
             <img
@@ -100,9 +159,7 @@ const App = () => {
               src={websiteData?.imageUrl}
             />
           )}
-          <p id="website-name" className="max">
-            {websiteData?.name}
-          </p>
+          <WebsiteName className="max">{websiteData?.name}</WebsiteName>
           <button aria-label="contact" className="circle transparent">
             <i>headset_mic</i>
           </button>
@@ -117,11 +174,11 @@ const App = () => {
           </button>
         </nav>
       </header>
-      <main className="scroll" ref={scrollRef}>
+      <Body className="scroll" ref={scrollRef}>
         <div className="no-line center-align">
-          <p id="disclaimer" className="medium-text">
+          <Disclaimer className="medium-text">
             {websiteData?.disclaimer}
-          </p>
+          </Disclaimer>
         </div>
         {messages.map((message) =>
           message.children.length === 1 ? (
@@ -135,53 +192,59 @@ const App = () => {
               url={message.children[0].url}
             />
           ) : (
-            message.children.map((childMessage) => (
+            message.children.map((childMessage, index) => (
               <ChatBubble
                 content={childMessage.content}
                 createdAt={message.createdAt._nanoseconds}
-                id={message.id}
+                id={`${message.id}_${index}`}
                 imageUrl={childMessage.imageUrl}
-                key={message.id}
+                key={`${message.id}_${index}`}
                 role={childMessage.role}
                 url={childMessage.url}
               />
             ))
           )
         )}
-        <div id="footer-spacer" />
-      </main>
+        <FooterSpacer />
+      </Body>
       <footer className="fixed large-blur">
         <nav>
-          <div className="max field label border small round">
-            <input
-              onChange={(e) => {
-                setMessage(e.target.value);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSendMessage();
-                }
-              }}
-              type="text"
-              value={message}
-            />
-            <label>메시지를 입력하세요</label>
-          </div>
-          <button
-            aria-label="send"
-            className="circle no-padding"
-            disabled={!message}
-            onClick={handleSendMessage}
-          >
-            <i>send</i>
-          </button>
+          <InputBlock>
+            <InputComponent
+              className="field border small round"
+              isActive={!!message}
+            >
+              <input
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSendMessage();
+                  }
+                }}
+                type="text"
+                value={message}
+                placeholder="Message"
+              />
+            </InputComponent>
+            <SendButton
+              aria-label="send"
+              className="circle no-padding"
+              disabled={!message}
+              isActive={!!message}
+              onClick={handleSendMessage}
+            >
+              <i>arrow_upward_alt</i>
+            </SendButton>
+          </InputBlock>
         </nav>
       </footer>
       <div className="snackbar error" id="snackbar">
         <i>warning</i>
         <span>{errorMessage}</span>
       </div>
-    </div>
+    </AppContainer>
   );
 };
 

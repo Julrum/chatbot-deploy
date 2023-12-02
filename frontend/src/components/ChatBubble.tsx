@@ -16,7 +16,7 @@ const ChatBubble = ({
   <div
     style={{
       display: "flex",
-      padding: "10px 20px",
+      padding: "4px 20px",
     }}
   >
     {role === "user" && (
@@ -32,14 +32,12 @@ const ChatBubble = ({
       </p>
     )}
     <article
-      className={
-        role === "user" ? "fill no-padding" : "primary-container no-padding"
-      }
+      className={`no-padding round ${
+        role === "user" ? "fill" : "primary-container"
+      }`}
       onClick={url ? () => window.open(url, "_blank") : undefined}
       style={{
         boxShadow: "none",
-        borderRadius:
-          role === "user" ? "12px 12px 0px 12px" : "12px 12px 12px 0px",
         cursor: url ? "pointer" : "default",
         maxWidth: "70%",
         width: "fit-content",
@@ -47,9 +45,15 @@ const ChatBubble = ({
       }}
     >
       {imageUrl && (
-        <img alt="url preview" className="responsive medium" src={imageUrl} />
+        <img
+          alt="url preview"
+          className="responsive medium"
+          onError={(e) => (e.currentTarget.style.display = "none")}
+          src={imageUrl}
+          style={{ borderRadius: "2rem 2rem 0 0" }}
+        />
       )}
-      <div style={{ padding: "10px 14px" }}>
+      <div style={{ padding: "14px 16px" }}>
         {title && <h5>{title}</h5>}
         <p className="no-line no-margin">{content}</p>
       </div>
