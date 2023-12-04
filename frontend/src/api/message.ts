@@ -25,7 +25,7 @@ export const getReply = async (
   websiteId: string,
   sessionId: string,
   messageId: string
-): Promise<MessageProps> =>
+): Promise<MessageProps[]> =>
   fetchJSON(
     "GET",
     `/websites/${websiteId}/sessions/${sessionId}/messages/${messageId}/reply`

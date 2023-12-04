@@ -131,7 +131,7 @@ const App = () => {
           setMessages([...messages, newMessage]);
           setMessage("");
           const reply = await getReply(websiteId, sessionId, newMessage.id);
-          setMessages([...messages, newMessage, reply]);
+          setMessages([...messages, newMessage, ...reply]);
           setIsSending(false);
         }
       } else {
