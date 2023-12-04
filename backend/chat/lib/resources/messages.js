@@ -71,5 +71,18 @@ exports.messagesCollection = {
         const messages = await ref.get();
         return messages.docs.map((doc) => doc.data());
     },
+    listRecentN: async (websiteId, sessionId, n) => {
+        const db = admin.firestore();
+        const ref = db
+            .collection(resource_1.ResourceName.Websites)
+            .doc(websiteId)
+            .collection(resource_1.ResourceName.Sessions)
+            .doc(sessionId)
+            .collection(resource_1.ResourceName.Messages)
+            .orderBy("createdAt", "desc")
+            .limit(n);
+        const messages = await ref.get();
+        return messages.docs.map((doc) => doc.data());
+    },
 };
 //# sourceMappingURL=messages.js.map

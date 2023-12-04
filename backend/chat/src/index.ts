@@ -45,4 +45,6 @@ app.delete(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}/:sess
 
 app.get(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}/:session_id/${ResourceName.Messages}/:message_id/reply`, getReply);
 
+app.listen(3000, () => console.log("Local app listening on port 3000!"));
+
 export const chat = functions.onRequest(app);

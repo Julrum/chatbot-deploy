@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteWebsite = exports.listWebsites = exports.postWebsite = exports.getWebsite = void 0;
 const websites_1 = require("../resources/websites");
 const https_1 = require("firebase-functions/v2/https");
-const v1_1 = require("firebase-functions/v1");
+const v2_1 = require("firebase-functions/v2");
 /**
  * Fill optional fields of a website
  * @param {Website} website
@@ -30,13 +30,13 @@ const getWebsite = async (req, res) => {
     }
     catch (error) {
         if (error instanceof https_1.HttpsError) {
-            v1_1.logger.error(`HTTPS error: ${error.message}, \
+            v2_1.logger.error(`HTTPS error: ${error.message}, \
       error code = ${error.httpErrorCode}`);
             res.status(error.httpErrorCode.status).send(error.message);
             return;
         }
         else {
-            v1_1.logger.error(`Non-HTTPS error: ${JSON.stringify(error)}, \
+            v2_1.logger.error(`Non-HTTPS error: ${JSON.stringify(error)}, \
       error code = 500`);
             res.status(500).send(JSON.stringify(error));
         }

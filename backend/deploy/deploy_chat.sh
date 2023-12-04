@@ -7,7 +7,8 @@ gcloud functions deploy chat \
         --runtime nodejs20 \
         --trigger-http \
         --entry-point chat \
-        --source ../chat
+        --source ../chat \
+        --timeout 300s
 
 mv ../chat/.gitignore.bak ../chat/.gitignore
 

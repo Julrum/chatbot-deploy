@@ -20,7 +20,12 @@ export interface Message extends Resource {
   children: ChildMessage[];
 }
 
-export const messagesCollection: Collection<Message> = {
+export interface MessagesCollection extends Collection<Message> {
+  listRecentN: (
+    websiteId: string, sessionId: string, n: number) => Promise<Message[]>;
+}
+
+export const messagesCollection: MessagesCollection= {
   get: async (websiteId: string, sessionId: string, messageId: string) => {
     const db = admin.firestore();
     const message = await db
@@ -81,6 +86,19 @@ export const messagesCollection: Collection<Message> = {
       .collection(ResourceName.Sessions)
       .doc(sessionId)
       .collection(ResourceName.Messages);
+    const messages = await ref.get();
+    return messages.docs.map((doc) => doc.data() as Message);
+  },
+  listRecentN: async (websiteId: string, sessionId: string, n: number) => {
+    const db = admin.firestore();
+    const ref = db
+      .collection(ResourceName.Websites)
+      .doc(websiteId)
+      .collection(ResourceName.Sessions)
+      .doc(sessionId)
+      .collection(ResourceName.Messages)
+      .orderBy("createdAt", "desc")
+      .limit(n);
     const messages = await ref.get();
     return messages.docs.map((doc) => doc.data() as Message);
   },

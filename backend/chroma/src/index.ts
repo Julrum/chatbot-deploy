@@ -1,7 +1,10 @@
 import {onRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import * as express from "express";
-import {ChromaClient, Collection, OpenAIEmbeddingFunction} from "chromadb";
+import {
+  ChromaClient, Collection,
+  IncludeEnum, OpenAIEmbeddingFunction,
+} from "chromadb";
 import {SecretManagerServiceClient} from "@google-cloud/secret-manager";
 
 const app = express();
@@ -23,6 +26,7 @@ async function accessOpenAIAPIKey() : Promise<string> {
 }
 
 const client = new ChromaClient({path: "http://10.128.0.4:8000"});
+// const client = new ChromaClient({path: "localhost:8000"});
 
 app.get("/ping", (req, res) => {
   logger.info("ping");
@@ -83,12 +87,23 @@ interface Document {
   content: string;
 }
 
+interface QueryResult {
+  ids: string[];
+  metadatas: (Metadata | null)[];
+  contents: (string | null)[];
+  distances: (number | null)[];
+}
+
 // POST /collections/1234/documents/
 app.post("/collections/:collectionId/documents",
   async (req, res) => {
     logger.debug("POST /collections/:collectionId/documents called.");
     const {collectionId} = req.params;
     const documents: Document[] = req.body.documents;
+    if (!documents) {
+      res.status(400).send("Documents not provided.");
+      return;
+    }
     const ids = documents.map((doc) => doc.id);
     const metadatas = documents.map((doc) => doc.metadata);
     const contents = documents.map((doc) => doc.content);
@@ -196,7 +211,7 @@ app.get("/collections/:collectionId/count", async (req, res) => {
 
 interface Query {
   numResults: number;
-  query: string;
+  queries: string[];
 }
 
 // POST /collections/1234/query
@@ -211,23 +226,73 @@ app.post("/collections/:collectionId/query",
       name: collectionId,
       embeddingFunction,
     });
-    const query: Query = req.body;
-    const queryEmbeddings = await embeddingFunction.generate(
-      [query.query]);
+    const query: Query = req.body.query;
+    if (!query) {
+      res.status(400).send("Query not provided.");
+      return;
+    }
+    const maxDistance: number = req.body.maxDistance;
+    if (!maxDistance) {
+      res.status(400).send("maxDistance not provided.");
+      return;
+    }
+    const minContentLength: number = req.body.minContentLength;
+    if (!minContentLength) {
+      res.status(400).send("minContentLength not provided.");
+      return;
+    }
 
-    const queryResult = await collection.query({
-      queryEmbeddings,
-      nResults: query.numResults,
-    });
-    const ids = queryResult.ids;
-    const metadatas = queryResult.metadatas;
-    const documents = queryResult.documents;
-    const results = ids.map((id, i) => ({
-      id: id,
-      metadata: metadatas[i],
-      content: documents[i],
-    }));
-    res.status(200).send(results);
+    const queryEmbeddings = await embeddingFunction.generate(
+      query.queries);
+
+    try {
+      const queryResult = await collection.query({
+        queryEmbeddings,
+        nResults: query.numResults,
+        include: [
+          IncludeEnum.Distances,
+          IncludeEnum.Metadatas,
+          IncludeEnum.Documents,
+        ],
+      });
+      const ids = queryResult.ids;
+      const distances = queryResult.distances ?? Array(ids.length).fill(null);
+      const results = ids.map((ids, i) => ({
+        ids,
+        metadatas: queryResult.metadatas[i],
+        contents: queryResult.documents[i],
+        distances: distances[i],
+      } as QueryResult));
+      const filterQueryResult = (result: QueryResult) => {
+        const validIndicies = result.ids.map((id, i) => {
+          const distance = result.distances[i] ?? Infinity;
+          const content = result.contents[i] ?? "";
+          return distance <= maxDistance && content.length >= minContentLength;
+        });
+        const filteredIds = result.ids.filter((_, i) => validIndicies[i]);
+        const filteredMetadata = result.metadatas.filter(
+          (_, i) => validIndicies[i]);
+        const filteredContent = result.contents.filter(
+          (_, i) => validIndicies[i]);
+        const filteredDistances = result.distances.filter(
+          (_, i) => validIndicies[i]);
+        const filteredQueryResult = {
+          ids: filteredIds,
+          metadatas: filteredMetadata,
+          contents: filteredContent,
+          distances: filteredDistances,
+        } as QueryResult;
+        return filteredQueryResult;
+      };
+      const filteredQueryResults = results.map(filterQueryResult);
+      res.status(200).send(filteredQueryResults);
+    } catch (e) {
+      res.status(500).send(`Failed to query: ${e}`);
+    }
   }
 );
+
+// app.listen(8080, () => {
+//   logger.info("Listening on port 8080.");
+// });
 export const chroma = onRequest(app);
