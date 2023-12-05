@@ -13,7 +13,8 @@ import Timestamp from "./components/Timestamp";
 import type { MessageProps } from "./types/message";
 import type { WebsiteProps } from "./types/website";
 
-import "./styles/slick.css";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
 const FooterSpacer = styled.div`
   height: 80px;
@@ -187,6 +188,39 @@ const App = () => {
                   centerMode
                   className="center"
                   infinite={false}
+                  slidesToScroll={5}
+                  slidesToShow={5}
+                  responsive={[
+                    {
+                      breakpoint: 1024,
+                      settings: {
+                        arrows: false,
+                        centerMode: false,
+                        dots: true,
+                        infinite: true,
+                        slidesToScroll: 3,
+                        slidesToShow: 3,
+                      },
+                    },
+                    {
+                      breakpoint: 600,
+                      settings: {
+                        arrows: false,
+                        centerMode: false,
+                        initialSlide: 2,
+                        slidesToScroll: 2,
+                        slidesToShow: 2,
+                      },
+                    },
+                    {
+                      breakpoint: 480,
+                      settings: {
+                        arrows: false,
+                        slidesToShow: 1,
+                        slidesToScroll: 1,
+                      },
+                    },
+                  ]}
                 >
                   {message.children.map((childMessage, index) => (
                     <ChatBubble
