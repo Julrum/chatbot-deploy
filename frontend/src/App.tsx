@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Skeleton from "react-loading-skeleton";
 import Carousel from "react-slick";
 import styled from "styled-components";
 
@@ -15,6 +16,7 @@ import type { WebsiteProps } from "./types/website";
 
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import "react-loading-skeleton/dist/skeleton.css";
 
 const FooterSpacer = styled.div`
   height: 80px;
@@ -35,6 +37,7 @@ const MessageContainer = styled.div`
   display: flex;
   margin-top: 8px;
   padding: 0 16px;
+  width: 100%;
   /* 
   @keyframes slideUp {
     from {
@@ -128,9 +131,17 @@ const App = () => {
       if (sessionId) {
         if (!isSending && message) {
           setIsSending(true);
-          const newMessage = await sendMessage(websiteId, sessionId, message);
-          setMessages([...messages, newMessage]);
+          setMessages([
+            ...messages,
+            {
+              role: "user",
+              children: [{ content: message }],
+              id: "temp",
+              createdAt: new Date().toISOString(),
+            },
+          ]);
           setMessage("");
+          const newMessage = await sendMessage(websiteId, sessionId, message);
           const reply = await getReply(websiteId, sessionId, newMessage.id);
           setMessages([...messages, newMessage, ...reply]);
           setIsSending(false);
@@ -140,6 +151,7 @@ const App = () => {
       }
     } catch (error) {
       console.log(error);
+      setIsSending(false);
       setErrorMessage("메시지 전송에 실패했습니다.");
       ui("#snackbar");
     }
@@ -157,28 +169,23 @@ const App = () => {
           }}
         >
           {messages.map((message) =>
-            message.children.length === 1 ? (
+            message.children.length === 0 ? null : message.children.length ===
+              1 ? (
               <MessageContainer key={message.id}>
-                {message.children[0].role === "user" && (
-                  <Timestamp
-                    role="user"
-                    time={message.createdAt._nanoseconds}
-                  />
+                {message.role === "user" && (
+                  <div style={{ flexGrow: 1, width: "64px" }} />
                 )}
                 <ChatBubble
                   content={message.children[0].content}
                   defaultImage={websiteData?.imageUrl ?? ""}
                   imageUrl={message.children[0].imageUrl}
                   key={message.id}
-                  role={message.children[0].role}
+                  role={message.role}
                   title={message.children[0].title}
                   url={message.children[0].url}
                 />
-                {message.children[0].role === "assistant" && (
-                  <Timestamp
-                    role="assistant"
-                    time={message.createdAt._nanoseconds}
-                  />
+                {message.role === "assistant" && (
+                  <div style={{ flexGrow: 1, width: "64px" }} />
                 )}
               </MessageContainer>
             ) : (
@@ -228,7 +235,7 @@ const App = () => {
                       defaultImage={websiteData?.imageUrl ?? ""}
                       imageUrl={childMessage.imageUrl}
                       key={`${message.id}_${index}`}
-                      role={childMessage.role}
+                      role={message.role}
                       title={childMessage.title}
                       url={childMessage.url}
                     />
@@ -236,6 +243,28 @@ const App = () => {
                 </Carousel>
               </CarouselContainer>
             )
+          )}
+          {messages[messages.length - 1]?.role &&
+            messages[messages.length - 1].createdAt && (
+              <div style={{ padding: "8px 16px" }}>
+                <Timestamp
+                  role={messages[messages.length - 1].role}
+                  time={messages[messages.length - 1].createdAt}
+                />
+              </div>
+            )}
+          {isSending && (
+            <MessageContainer>
+              <ChatBubble
+                content={
+                  <div style={{ width: "250px" }}>
+                    <Skeleton />
+                  </div>
+                }
+                role="assistant"
+                defaultImage=""
+              />
+            </MessageContainer>
           )}
         </div>
         <FooterSpacer />

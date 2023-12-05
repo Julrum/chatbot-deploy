@@ -1,8 +1,5 @@
 export interface WebsiteProps {
-  createdAt: {
-    _seconds: number;
-    _nanoseconds: number;
-  };
+  createdAt: string;
   description: string;
   disclaimer: string;
   id: string;

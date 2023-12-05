@@ -1,6 +1,7 @@
+import type { ReactNode } from "react";
 import styled from "styled-components";
 
-import type { ChildMessageProps } from "../types/message";
+import type { ChildMessageProps, MessageProps } from "../types/message";
 
 const Bubble = styled.article<{ $isCard: boolean }>`
   box-shadow: none;
@@ -36,7 +37,11 @@ const ChatBubble = ({
   role,
   title,
   url,
-}: ChildMessageProps & { defaultImage: string }) => {
+}: Omit<ChildMessageProps, "content"> &
+  Pick<MessageProps, "role"> & {
+    content: ReactNode;
+    defaultImage: string;
+  }) => {
   const isCard = !!(url || imageUrl || title);
 
   return (

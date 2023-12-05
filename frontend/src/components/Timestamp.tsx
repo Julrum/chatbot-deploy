@@ -8,8 +8,9 @@ const Paragraph = styled.p<{ role: "assistant" | "user" }>`
   font-size: 12px;
   margin: ${(props) =>
     props.role === "assistant" ? "auto 0 0 8px" : "auto 8px 0 0"};
+  min-width: 64px;
   text-align: ${(props) => (props.role === "assistant" ? "start" : "end")};
-  width: 64px;
+  width: 100%;
 `;
 
 const Timestamp = ({
@@ -17,10 +18,10 @@ const Timestamp = ({
   time,
 }: {
   role: "assistant" | "user";
-  time: number;
+  time: string;
 }) => (
   <Paragraph role={role}>
-    {dayFormatter(time, "LT", { locale: "ko", isZuluTime: true })}
+    {dayFormatter(new Date(time), "LT", { locale: "ko", isZuluTime: true })}
   </Paragraph>
 );
 

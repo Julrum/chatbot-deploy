@@ -13,10 +13,10 @@ export const sendMessage = async (
   message: string
 ): Promise<MessageProps> =>
   fetchJSON("POST", `/websites/${websiteId}/sessions/${sessionId}/messages`, {
+    role: "user",
     children: [
       {
         content: message,
-        role: "user",
       },
     ],
   });
