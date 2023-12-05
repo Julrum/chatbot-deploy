@@ -31,10 +31,12 @@ const SendButton = styled.button<{ $isActive: boolean }>`
 `;
 
 const Footer = ({
+  isSending,
   handleSendMessage,
   message,
   setMessage,
 }: {
+  isSending: boolean;
   handleSendMessage: () => void;
   message: string;
   setMessage: React.Dispatch<React.SetStateAction<string>>;
@@ -48,6 +50,7 @@ const Footer = ({
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
+              if (e.nativeEvent.isComposing) return;
               handleSendMessage();
             }
           }}
@@ -59,7 +62,7 @@ const Footer = ({
       <SendButton
         aria-label="send"
         className="circle no-padding"
-        disabled={!message}
+        disabled={!message || isSending}
         $isActive={!!message}
         onClick={handleSendMessage}
       >

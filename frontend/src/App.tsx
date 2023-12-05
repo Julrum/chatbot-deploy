@@ -270,6 +270,7 @@ const App = () => {
         <FooterSpacer />
       </Body>
       <Footer
+        isSending={isSending}
         handleSendMessage={handleSendMessage}
         message={message}
         setMessage={setMessage}
