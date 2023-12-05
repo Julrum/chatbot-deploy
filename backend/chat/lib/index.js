@@ -26,6 +26,5 @@ exports.app.post(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.
 exports.app.get(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}/:session_id/${resource_1.ResourceName.Messages}`, messages_1.listMessages);
 exports.app.delete(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}/:session_id/${resource_1.ResourceName.Messages}/:message_id`, messages_1.deleteMessage);
 exports.app.get(`/${resource_1.ResourceName.Websites}/:website_id/${resource_1.ResourceName.Sessions}/:session_id/${resource_1.ResourceName.Messages}/:message_id/reply`, messages_1.getReply);
-exports.app.listen(3000, () => console.log("Local app listening on port 3000!"));
 exports.chat = functions.onRequest(exports.app);
 //# sourceMappingURL=index.js.map
