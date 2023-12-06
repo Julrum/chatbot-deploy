@@ -276,13 +276,28 @@ app.post("/collections/:collectionId/query",
           (_, i) => validIndicies[i]);
         const filteredDistances = result.distances.filter(
           (_, i) => validIndicies[i]);
-        const filteredQueryResult = {
-          ids: filteredIds,
-          metadatas: filteredMetadata,
-          contents: filteredContent,
-          distances: filteredDistances,
+        const deduplicatedIds = [...new Set(filteredIds)];
+        const deduplicatedMetadata = deduplicatedIds.map((id) => {
+          const index = filteredIds.indexOf(id);
+          return filteredMetadata[index];
+        }
+        );
+        const deduplicatedContent = deduplicatedIds.map((id) => {
+          const index = filteredIds.indexOf(id);
+          return filteredContent[index];
+        }
+        );
+        const deduplicatedDistances = deduplicatedIds.map((id) => {
+          const index = filteredIds.indexOf(id);
+          return filteredDistances[index];
+        }
+        );
+        return {
+          ids: deduplicatedIds,
+          metadatas: deduplicatedMetadata,
+          contents: deduplicatedContent,
+          distances: deduplicatedDistances,
         } as QueryResult;
-        return filteredQueryResult;
       };
       const filteredQueryResults = results.map(filterQueryResult);
       res.status(200).send(filteredQueryResults);

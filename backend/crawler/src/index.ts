@@ -60,7 +60,7 @@ app.post("/crawl", async (req, res) => {
       title: thread.title,
       date: thread.date,
       url: thread.url,
-      imageUrls: thread.imageUrls.join(","),
+      imageUrls: JSON.stringify(thread.imageUrls),
     } as Metadata,
     content: thread.content,
   }));

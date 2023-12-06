@@ -247,13 +247,25 @@ app.post("/collections/:collectionId/query", async (req, res) => {
             const filteredMetadata = result.metadatas.filter((_, i) => validIndicies[i]);
             const filteredContent = result.contents.filter((_, i) => validIndicies[i]);
             const filteredDistances = result.distances.filter((_, i) => validIndicies[i]);
-            const filteredQueryResult = {
-                ids: filteredIds,
-                metadatas: filteredMetadata,
-                contents: filteredContent,
-                distances: filteredDistances,
+            const deduplicatedIds = [...new Set(filteredIds)];
+            const deduplicatedMetadata = deduplicatedIds.map((id) => {
+                const index = filteredIds.indexOf(id);
+                return filteredMetadata[index];
+            });
+            const deduplicatedContent = deduplicatedIds.map((id) => {
+                const index = filteredIds.indexOf(id);
+                return filteredContent[index];
+            });
+            const deduplicatedDistances = deduplicatedIds.map((id) => {
+                const index = filteredIds.indexOf(id);
+                return filteredDistances[index];
+            });
+            return {
+                ids: deduplicatedIds,
+                metadatas: deduplicatedMetadata,
+                contents: deduplicatedContent,
+                distances: deduplicatedDistances,
             };
-            return filteredQueryResult;
         };
         const filteredQueryResults = results.map(filterQueryResult);
         res.status(200).send(filteredQueryResults);

@@ -117,7 +117,7 @@ async function getReply(req, res) {
         res.status(400).send("Missing websiteId, sessionId or messageId");
         return;
     }
-    const windowSizes = [1, 2, 3];
+    const windowSizes = [1, 8, 16];
     const largestWindowSize = windowSizes.sort()[windowSizes.length - 1];
     let history = [];
     try {
@@ -130,6 +130,16 @@ async function getReply(req, res) {
             return;
         }
         res.status(500).send(JSON.stringify(error));
+        return;
+    }
+    history = history.filter((message) => {
+        return message.children.length > 0;
+    });
+    if (history.length === 0) {
+        firebase_functions_1.logger.error(`Failed to retrieve history from \
+    websiteId=${websiteId}, sessionId=${sessionId}\
+    history=${JSON.stringify(history)}`);
+        res.status(400).send(`No non-carousel message found in websiteId=${websiteId}, sessionId=${sessionId}`);
         return;
     }
     const userMessages = history.filter((message) => {
@@ -204,11 +214,12 @@ async function getReply(req, res) {
     }
     const queryResult = queryResults[0];
     const retrievedDocuments = queryResult ? queryResult.ids.map((id, index) => {
-        var _a, _b;
+        var _a, _b, _c, _d;
         return {
             url: (_a = queryResult.metadatas[index]) === null || _a === void 0 ? void 0 : _a.url,
             title: (_b = queryResult.metadatas[index]) === null || _b === void 0 ? void 0 : _b.title,
             content: queryResult.contents[index],
+            imageUrls: JSON.parse((_d = (_c = queryResult.metadatas[index]) === null || _c === void 0 ? void 0 : _c.imageUrls) !== null && _d !== void 0 ? _d : "[]"),
         };
     }) : [];
     const promptFromRetrieval = retrievedDocuments.length > 0 ? `[${retrievedDocuments.map((document) => {
@@ -297,10 +308,11 @@ async function getReply(req, res) {
             deletedAt: null,
             role: messages_1.MessageRole.assistant,
             children: retrievedDocuments.map((doc) => {
+                var _a;
                 return {
                     title: doc.title,
                     content: doc.content,
-                    imageUrl: null,
+                    imageUrl: (_a = doc.imageUrls[0]) !== null && _a !== void 0 ? _a : null,
                     url: doc.url,
                 };
             }),

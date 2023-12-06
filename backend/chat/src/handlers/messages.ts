@@ -106,9 +106,10 @@ interface OpenAIMessage {
 
 type Metadata = Record<string, string | number | boolean>;
 interface Document {
-  url: string;
   title: string;
   content: string;
+  url: string;
+  imageUrls: string[];
 }
 
 interface QueryResult {
@@ -158,7 +159,7 @@ export async function getReply(req: Request, res: Response): Promise<void> {
     res.status(400).send("Missing websiteId, sessionId or messageId");
     return;
   }
-  const windowSizes = [1, 2, 3];
+  const windowSizes = [1, 8, 16];
   const largestWindowSize = windowSizes.sort()[windowSizes.length - 1];
   let history: Message[] = [];
   try {
@@ -171,6 +172,16 @@ export async function getReply(req: Request, res: Response): Promise<void> {
       return;
     }
     res.status(500).send(JSON.stringify(error));
+    return;
+  }
+  history = history.filter((message) => {
+    return message.children.length > 0;
+  });
+  if (history.length === 0) {
+    logger.error(`Failed to retrieve history from \
+    websiteId=${websiteId}, sessionId=${sessionId}\
+    history=${JSON.stringify(history)}`);
+    res.status(400).send(`No non-carousel message found in websiteId=${websiteId}, sessionId=${sessionId}`);
     return;
   }
   const userMessages = history.filter((message) => {
@@ -249,6 +260,8 @@ export async function getReply(req: Request, res: Response): Promise<void> {
       url: queryResult.metadatas[index]?.url as string,
       title: queryResult.metadatas[index]?.title as string,
       content: queryResult.contents[index] as string,
+      imageUrls: JSON.parse(
+        queryResult.metadatas[index]?.imageUrls as string ?? "[]") as string[],
     } as Document;
   }) : [];
   const promptFromRetrieval = retrievedDocuments.length > 0 ? `[${retrievedDocuments.map((document) => {
@@ -338,7 +351,7 @@ export async function getReply(req: Request, res: Response): Promise<void> {
         return {
           title: doc.title,
           content: doc.content,
-          imageUrl: null,
+          imageUrl: doc.imageUrls[0] ?? null,
           url: doc.url,
         } as ChildMessage;
       }),
