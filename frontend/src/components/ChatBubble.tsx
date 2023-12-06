@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 
 import type { ChildMessageProps, MessageProps } from "../types/message";
 
 const Bubble = styled.article<{ $isCard: boolean }>`
   box-shadow: none;
   cursor: ${({ $isCard }) => ($isCard ? "pointer" : "default")};
+  max-height: 350px;
+  max-width: 400px;
   width: ${({ $isCard }) => ($isCard ? "100%" : "fit-content")};
   word-break: break-word;
-  max-width: 400px;
 `;
 
 const Image = styled.img`
@@ -22,12 +23,39 @@ const TextBlock = styled.div<{ $isCard: boolean }>`
   padding: ${({ $isCard }) => ($isCard ? "14px 16px" : "10px 16px")};
 `;
 
-const Title = styled.h6`
+const Title = styled.h6<{ $isCard: boolean }>`
+  border-radius: 0;
   font-size: 14px;
+
+  ${({ $isCard }) =>
+    $isCard &&
+    css`
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      display: -webkit-box;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: normal;
+      word-break: break-all;
+    `};
 `;
 
 const Content = styled.p<{ $isCard: boolean }>`
-  font-size: ${({ $isCard }) => ($isCard ? "12px" : "16px")};
+  border-radius: 0;
+  font-size: 16px;
+
+  ${({ $isCard }) =>
+    $isCard &&
+    css`
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      display: -webkit-box;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: normal;
+      word-break: keep-all;
+    `};
 `;
 
 const ChatBubble = ({
@@ -61,7 +89,7 @@ const ChatBubble = ({
         />
       )}
       <TextBlock $isCard={isCard}>
-        {title && <Title>{title}</Title>}
+        {title && <Title $isCard={isCard}>{title}</Title>}
         <Content className="no-line no-margin" $isCard={isCard}>
           {content}
         </Content>
