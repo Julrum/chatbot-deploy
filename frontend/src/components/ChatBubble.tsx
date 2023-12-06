@@ -6,7 +6,7 @@ import type { ChildMessageProps, MessageProps } from "../types/message";
 const Bubble = styled.article<{ $isCard: boolean }>`
   box-shadow: none;
   cursor: ${({ $isCard }) => ($isCard ? "pointer" : "default")};
-  max-height: 350px;
+  max-height: ${({ $isCard }) => ($isCard ? "350px" : "none")};
   max-width: 400px;
   width: ${({ $isCard }) => ($isCard ? "100%" : "fit-content")};
   word-break: break-word;
