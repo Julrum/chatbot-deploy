@@ -1,5 +1,9 @@
 import * as admin from "firebase-admin";
-import {ResourceName, Resource, Collection} from "./resource";
+import {
+  ResourceName, Resource, Collection, convertResourceDates,
+// eslint-disable-next-line import/namespace
+} from "./resource";
+import {logger} from "firebase-functions/v2";
 import {HttpsError} from "firebase-functions/v2/https";
 
 
@@ -15,7 +19,13 @@ export const sessionCollection: Collection<Resource> = {
     if (!session.exists) {
       throw new HttpsError("not-found", "Session not found");
     }
-    return session.data() as Resource;
+    const _session = session.data() as Resource;
+    try {
+      return convertResourceDates(_session);
+    } catch (error) {
+      logger.error(`Error converting dates: ${error}`);
+      throw error;
+    }
   },
   add: async (session: Resource, websiteId: string) => {
     const db = admin.firestore();
@@ -45,7 +55,13 @@ export const sessionCollection: Collection<Resource> = {
       .doc(websiteId)
       .collection(ResourceName.Sessions)
       .get();
-    return sessionDocs.docs.map((doc) => doc.data() as Resource);
+    const _resources = sessionDocs.docs.map((doc) => doc.data() as Resource);
+    try {
+      return _resources.map((resource) => convertResourceDates(resource));
+    } catch (error) {
+      logger.error(`Error converting dates: ${error}`);
+      throw error;
+    }
   },
 };
 

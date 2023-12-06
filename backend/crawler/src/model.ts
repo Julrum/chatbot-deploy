@@ -1,5 +1,4 @@
 export type Metadata = Record<string, string | number | boolean>;
-
 export interface Document {
   id: string;
   metadata: Metadata;
@@ -12,9 +11,13 @@ export interface ThreadLink {
   date: string;
   url: string;
 }
-
+export enum ThreadType {
+  text = "text",
+  ocr = "ocr",
+}
 export interface Thread {
   id: number;
+  type: ThreadType;
   offset: number;
   title: string;
   date: string;
@@ -26,6 +29,7 @@ export interface CrawlConfig {
   minId: number;
   maxId: number;
   maxRetry: number;
+  maxOCRRetry: number;
   maxContentLength: number;
   maxRecursionDepth: number;
   collectionName: string;

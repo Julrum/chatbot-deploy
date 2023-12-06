@@ -1,8 +1,9 @@
 /* eslint-disable no-multi-str */
 import puppeteer, {Browser, ProtocolError} from "puppeteer";
 // import {ThreadLink, Thread} from "./model";
-import {Thread} from "./model";
+import {Thread, ThreadType} from "./model";
 import {logger} from "firebase-functions";
+import {extractTextFromImage} from "./ocr";
 
 /**
  *
@@ -23,66 +24,6 @@ function extractIdFromUrl(url: string): number | null {
   return id;
 }
 
-
-/**
- *
- * @param {Browser} browser puppeteer browser instance.
- * @param {string} url url of the board.
- * @return {Promise<ThreadLink[]>} thread links in the board.
- */
-// async function extractLinksInBoard(
-//   browser: Browser, url: string): Promise<ThreadLink[]> {
-//   const page = await browser.newPage();
-//   try {
-//     // waits until the network is idle
-//     // (no more than 2 connections for at least 500 ms).
-//     await page.goto(url, {waitUntil: "networkidle2"});
-//   } catch (e) {
-//     if (e instanceof ProtocolError) {
-//       await page.close();
-//       throw new Error(
-//         `Failed to navigate to ${url}, exiting loop.`);
-//     }
-//   }
-//   // Now, the page is fully loaded,
-//   // and you can select elements as in a regular browser.
-//   try {
-//     const threadLinks = await page.evaluate(() => {
-//       // You can use regular DOM methods here.
-//       const tbodys = document.querySelector(
-//         "#wrap > div.container > section > div > table > tbody",
-//       )?.children;
-//       if (!tbodys) {
-//         throw new Error(
-//           `Failed to find CSS selector:
-//           ${"#wrap > div.container > section > div > table > tbody"}`);
-//       }
-//       return Array.from(tbodys).map((v) => {
-//         const prefix = v.children[0]?.innerHTML;
-//         const title = v.children[1]?.children[0].innerHTML;
-//         const dateTimeText = v.children[2]?.innerHTML;
-//         const standardDateTimeText = dateTimeText.replace(/\./g, "-").trim();
-//         const date = new Date(standardDateTimeText).toISOString();
-//         const urlPath = v.children[1]?.children[0].getAttribute("href");
-//         const url = `https://startup.hanyang.ac.kr${urlPath}`;
-//         return {prefix, title, date, url} as ThreadLink;
-//       });
-//     });
-//     await page.close();
-//     return threadLinks;
-//   } catch (e) {
-//     await page.close();
-//     if (!(e instanceof Error)) {
-//       throw e;
-//     }
-//     throw new Error(JSON.stringify({
-//       name: e.name,
-//       message: e.message,
-//       stack: e.stack,
-//       url: url,
-//     }));
-//   }
-// }
 
 /**
  *
@@ -155,6 +96,28 @@ async function extractThread(
       .map((v) => v.join(" "))
       .join(" ")
       .replace(/<[^>]*>?/gm, "");
+
+    let contentImageTags: (string | null)[] = [];
+    try {
+      contentImageTags = await page.$$eval("img", (elements) => {
+        return elements.filter(
+          // eslint-disable-next-line max-len
+          (e) => e.src.startsWith("https://startup.hanyang.ac.kr/api/resource/BOARD_CONTENT_IMG"))
+          .map((e) => {
+            return e.getAttribute("src");
+          });
+      });
+      if (contentImageTags.length > 0) {
+        logger.debug(`Extracted ${contentImageTags.length} image urls\
+          from ${url}.`);
+        logger.debug(`First image url: ${contentImageTags[0]}`);
+      }
+    } catch (e) {
+      logger.warn(`Failed to extract image urls: ${e}`);
+      contentImageTags = [];
+    }
+    const imageUrls = contentImageTags.filter((v) => v) as string[];
+
     const id = extractIdFromUrl(url);
     if (!id) {
       throw new Error(`Failed to extract id from ${url}`);
@@ -162,12 +125,13 @@ async function extractThread(
     await page.close();
     return {
       id: id,
+      type: ThreadType.text,
       url: url,
       offset: 0,
       title: titleAndDate.title,
       date: titleAndDate.date,
       content: ckContentTextsConcatenated,
-      imageUrls: [],
+      imageUrls: imageUrls,
     } as Thread;
   } catch (e) {
     await page.close();
@@ -189,35 +153,72 @@ async function extractThread(
  * @param {number} minId
  * @param {number} maxId
  * @param {number} maxRetry
+ * @param {number} maxOCRRetry
  * @return {Promise<Thread[]>} threads crawled.
  */
 export async function crawlThreads(
-  minId: number, maxId: number, maxRetry: number): Promise<Thread[]> {
+  minId: number, maxId: number,
+  maxRetry: number, maxOCRRetry: number): Promise<Thread[]> {
   const browser = await puppeteer.launch({
     headless: "new",
   });
   const links = Array.from({length: maxId - minId + 1}, (_, i) => i + minId)
     .map((id) => `https://startup.hanyang.ac.kr/board/notice/view/${id}?boardName=notice`);
   try {
-    logger.debug(`Extracted ${links.length} links.`);
+    logger.debug(`Start crawling ${links.length} links.`);
     const threads = await Promise.all(links.map(async (v) => {
       let thread: Thread | null = null;
+      let error: Error | null = null;
       for (let i = 0; i < maxRetry; i++) {
         try {
           thread = await extractThread(browser, v);
           return thread;
         } catch (e) {
+          if (!(e instanceof Error)) {
+            throw e;
+          } else {
+            error = e;
+          }
           logger.warn(`Failed to extract thread from ${v}, \
           retrying ${i + 1} / ${maxRetry} times.`);
           continue;
         }
       }
+      const err = error as Error;
       logger.error(
-        `Failed to extract thread from ${v} after ${maxRetry} retries.`);
+        `Failed to extract thread from ${v} after ${maxRetry} retries,\
+         error stack: ${err.stack}`);
+      throw err;
       return null;
     }).filter((v) => v !== null)) as Thread[];
+    const ocrThreads = await Promise.all(threads.map(async (thread) => ({
+      id: thread.id,
+      type: ThreadType.ocr,
+      offset: 0,
+      title: thread.title,
+      date: thread.date,
+      url: thread.url,
+      imageUrls: thread.imageUrls,
+      content: (await Promise.all(thread.imageUrls.map(
+        async (u) => {
+          for (let i = 0; i < maxOCRRetry; i++) {
+            try {
+              const text = await extractTextFromImage(u);
+              logger.debug(`Extracted text from ${u}: ${text.slice(0, 16)}...`);
+              return text;
+            } catch (error) {
+              logger.warn(`Failed to extract fullTextAnnotation from ${u}, \
+              retrying ${i + 1} / ${maxOCRRetry} times, error: ${error}`);
+              continue;
+            }
+          }
+          throw new Error(`Failed to extract texts from ${u} \
+          after ${maxOCRRetry} retries.`);
+        }
+      ))).join(" "),
+    }))) as Thread[];
     await browser.close();
-    return threads;
+    return [...threads, ...ocrThreads];
   } catch (e) {
     await browser.close();
     throw e;

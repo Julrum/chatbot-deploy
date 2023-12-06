@@ -1,4 +1,3 @@
-import pandas as pd
 import asyncio
 import aiohttp
 from typing import List 
@@ -9,7 +8,8 @@ request_body_base = {
     "port": 8000,
     "collectionName": "hyu-startup-notice",
     "maxRetry": 3,
-    "maxContentLength": 400,
+    "maxOCRRetry": 5,
+    "maxContentLength": 500,
     "maxRecursionDepth": 3
 }
 
@@ -38,6 +38,8 @@ print(f"Sending {len(request_bodies)} requests to {base_url}...")
 async def fetch(session, url, data):
     # return f"Sending request to {url} with data {data}"
     async with session.post(url, json=data, headers={"Content-Type": "application/json"}) as response:
+        if response.status != 200:
+            print(f"Error: {response.status}, request_body={data}")
         return await response.text()
 
 async def main():

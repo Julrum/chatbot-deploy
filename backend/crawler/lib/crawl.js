@@ -3,7 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.crawlThreads = void 0;
 /* eslint-disable no-multi-str */
 const puppeteer_1 = require("puppeteer");
+// import {ThreadLink, Thread} from "./model";
+const model_1 = require("./model");
 const firebase_functions_1 = require("firebase-functions");
+const ocr_1 = require("./ocr");
 /**
  *
  * @param {string} url url of the thread.
@@ -22,65 +25,6 @@ function extractIdFromUrl(url) {
     }
     return id;
 }
-/**
- *
- * @param {Browser} browser puppeteer browser instance.
- * @param {string} url url of the board.
- * @return {Promise<ThreadLink[]>} thread links in the board.
- */
-// async function extractLinksInBoard(
-//   browser: Browser, url: string): Promise<ThreadLink[]> {
-//   const page = await browser.newPage();
-//   try {
-//     // waits until the network is idle
-//     // (no more than 2 connections for at least 500 ms).
-//     await page.goto(url, {waitUntil: "networkidle2"});
-//   } catch (e) {
-//     if (e instanceof ProtocolError) {
-//       await page.close();
-//       throw new Error(
-//         `Failed to navigate to ${url}, exiting loop.`);
-//     }
-//   }
-//   // Now, the page is fully loaded,
-//   // and you can select elements as in a regular browser.
-//   try {
-//     const threadLinks = await page.evaluate(() => {
-//       // You can use regular DOM methods here.
-//       const tbodys = document.querySelector(
-//         "#wrap > div.container > section > div > table > tbody",
-//       )?.children;
-//       if (!tbodys) {
-//         throw new Error(
-//           `Failed to find CSS selector:
-//           ${"#wrap > div.container > section > div > table > tbody"}`);
-//       }
-//       return Array.from(tbodys).map((v) => {
-//         const prefix = v.children[0]?.innerHTML;
-//         const title = v.children[1]?.children[0].innerHTML;
-//         const dateTimeText = v.children[2]?.innerHTML;
-//         const standardDateTimeText = dateTimeText.replace(/\./g, "-").trim();
-//         const date = new Date(standardDateTimeText).toISOString();
-//         const urlPath = v.children[1]?.children[0].getAttribute("href");
-//         const url = `https://startup.hanyang.ac.kr${urlPath}`;
-//         return {prefix, title, date, url} as ThreadLink;
-//       });
-//     });
-//     await page.close();
-//     return threadLinks;
-//   } catch (e) {
-//     await page.close();
-//     if (!(e instanceof Error)) {
-//       throw e;
-//     }
-//     throw new Error(JSON.stringify({
-//       name: e.name,
-//       message: e.message,
-//       stack: e.stack,
-//       url: url,
-//     }));
-//   }
-// }
 /**
  *
  * @param {Browser} browser
@@ -146,6 +90,27 @@ async function extractThread(browser, url) {
             .map((v) => v.join(" "))
             .join(" ")
             .replace(/<[^>]*>?/gm, "");
+        let contentImageTags = [];
+        try {
+            contentImageTags = await page.$$eval("img", (elements) => {
+                return elements.filter(
+                // eslint-disable-next-line max-len
+                (e) => e.src.startsWith("https://startup.hanyang.ac.kr/api/resource/BOARD_CONTENT_IMG"))
+                    .map((e) => {
+                    return e.getAttribute("src");
+                });
+            });
+            if (contentImageTags.length > 0) {
+                firebase_functions_1.logger.debug(`Extracted ${contentImageTags.length} image urls\
+          from ${url}.`);
+                firebase_functions_1.logger.debug(`First image url: ${contentImageTags[0]}`);
+            }
+        }
+        catch (e) {
+            firebase_functions_1.logger.warn(`Failed to extract image urls: ${e}`);
+            contentImageTags = [];
+        }
+        const imageUrls = contentImageTags.filter((v) => v);
         const id = extractIdFromUrl(url);
         if (!id) {
             throw new Error(`Failed to extract id from ${url}`);
@@ -153,12 +118,13 @@ async function extractThread(browser, url) {
         await page.close();
         return {
             id: id,
+            type: model_1.ThreadType.text,
             url: url,
             offset: 0,
             title: titleAndDate.title,
             date: titleAndDate.date,
             content: ckContentTextsConcatenated,
-            imageUrls: [],
+            imageUrls: imageUrls,
         };
     }
     catch (e) {
@@ -179,34 +145,70 @@ async function extractThread(browser, url) {
  * @param {number} minId
  * @param {number} maxId
  * @param {number} maxRetry
+ * @param {number} maxOCRRetry
  * @return {Promise<Thread[]>} threads crawled.
  */
-async function crawlThreads(minId, maxId, maxRetry) {
+async function crawlThreads(minId, maxId, maxRetry, maxOCRRetry) {
     const browser = await puppeteer_1.default.launch({
         headless: "new",
     });
     const links = Array.from({ length: maxId - minId + 1 }, (_, i) => i + minId)
         .map((id) => `https://startup.hanyang.ac.kr/board/notice/view/${id}?boardName=notice`);
     try {
-        firebase_functions_1.logger.debug(`Extracted ${links.length} links.`);
+        firebase_functions_1.logger.debug(`Start crawling ${links.length} links.`);
         const threads = await Promise.all(links.map(async (v) => {
             let thread = null;
+            let error = null;
             for (let i = 0; i < maxRetry; i++) {
                 try {
                     thread = await extractThread(browser, v);
                     return thread;
                 }
                 catch (e) {
+                    if (!(e instanceof Error)) {
+                        throw e;
+                    }
+                    else {
+                        error = e;
+                    }
                     firebase_functions_1.logger.warn(`Failed to extract thread from ${v}, \
           retrying ${i + 1} / ${maxRetry} times.`);
                     continue;
                 }
             }
-            firebase_functions_1.logger.error(`Failed to extract thread from ${v} after ${maxRetry} retries.`);
+            const err = error;
+            firebase_functions_1.logger.error(`Failed to extract thread from ${v} after ${maxRetry} retries,\
+         error stack: ${err.stack}`);
+            throw err;
             return null;
         }).filter((v) => v !== null));
+        const ocrThreads = await Promise.all(threads.map(async (thread) => ({
+            id: thread.id,
+            type: model_1.ThreadType.ocr,
+            offset: 0,
+            title: thread.title,
+            date: thread.date,
+            url: thread.url,
+            imageUrls: thread.imageUrls,
+            content: (await Promise.all(thread.imageUrls.map(async (u) => {
+                for (let i = 0; i < maxOCRRetry; i++) {
+                    try {
+                        const text = await (0, ocr_1.extractTextFromImage)(u);
+                        firebase_functions_1.logger.debug(`Extracted text from ${u}: ${text.slice(0, 16)}...`);
+                        return text;
+                    }
+                    catch (error) {
+                        firebase_functions_1.logger.warn(`Failed to extract fullTextAnnotation from ${u}, \
+              retrying ${i + 1} / ${maxOCRRetry} times, error: ${error}`);
+                        continue;
+                    }
+                }
+                throw new Error(`Failed to extract texts from ${u} \
+          after ${maxOCRRetry} retries.`);
+            }))).join(" "),
+        })));
         await browser.close();
-        return threads;
+        return [...threads, ...ocrThreads];
     }
     catch (e) {
         await browser.close();

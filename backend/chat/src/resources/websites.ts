@@ -1,6 +1,10 @@
 import * as admin from "firebase-admin";
-import {ResourceName, Resource, Collection} from "./resource";
+import {
+  ResourceName, Resource, Collection, convertResourceDates,
+// eslint-disable-next-line import/namespace
+} from "./resource";
 import {HttpsError} from "firebase-functions/v2/https";
+import {logger} from "firebase-functions/v2";
 
 export interface Website extends Resource {
   name: string;
@@ -22,7 +26,13 @@ export const websiteCollection: Collection<Website> = {
     if (!websiteDoc.exists) {
       throw new HttpsError("not-found", "Website not found");
     }
-    return websiteDoc.data() as Website;
+    const _website = websiteDoc.data() as Website;
+    try {
+      return convertResourceDates(_website) as Website;
+    } catch (error) {
+      logger.error(`Error converting dates: ${error}`);
+      throw error;
+    }
   },
   add: async (website: Website) => {
     const db = admin.firestore();
@@ -41,7 +51,14 @@ export const websiteCollection: Collection<Website> = {
     const db = admin.firestore();
     const websitesRef = db.collection(ResourceName.Websites);
     const websiteDocs = await websitesRef.get();
-    return websiteDocs.docs.map((doc) => doc.data() as Website);
+    const _websites = websiteDocs.docs.map((doc) => doc.data() as Website);
+    try {
+      return _websites.map(
+        (website) => convertResourceDates(website) as Website);
+    } catch (error) {
+      logger.error(`Error converting dates: ${error}`);
+      throw error;
+    }
   },
 };
 

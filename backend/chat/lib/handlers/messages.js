@@ -68,19 +68,7 @@ exports.postMessage = postMessage;
  * GET /websites/website_id/sessions/session_id/messages
  */
 async function listMessages(req, res) {
-    const unorderedMessages = await messages_1.messagesCollection.list(req.params.website_id, req.params.session_id);
-    const messages = unorderedMessages.sort((a, b) => {
-        const firebaseTimestampToMilliseconds = (timestamp) => {
-            if (!timestamp) {
-                return 0;
-            }
-            if (timestamp instanceof Date) {
-                return timestamp.getTime();
-            }
-            return timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000;
-        };
-        return firebaseTimestampToMilliseconds(a.createdAt) - firebaseTimestampToMilliseconds(b.createdAt);
-    });
+    const messages = await messages_1.messagesCollection.list(req.params.website_id, req.params.session_id);
     res.status(200).send(messages);
 }
 exports.listMessages = listMessages;
@@ -144,43 +132,45 @@ async function getReply(req, res) {
         res.status(500).send(JSON.stringify(error));
         return;
     }
-    const historySorted = history.sort((a, b) => {
-        const firebaseTimestampToMilliseconds = (timestamp) => {
-            if (!timestamp) {
-                return 0;
-            }
-            if (timestamp instanceof Date) {
-                return timestamp.getTime();
-            }
-            return timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000;
-        };
-        return firebaseTimestampToMilliseconds(a.createdAt) - firebaseTimestampToMilliseconds(b.createdAt);
-    });
-    const userMessages = historySorted.filter((message) => {
-        return message.children.length > 0 &&
-            message.children[0].role === messages_1.MessageRole.user;
+    const userMessages = history.filter((message) => {
+        return message.role === messages_1.MessageRole.user;
     });
     if (userMessages.length === 0) {
         res.status(400).send(`No user message found in websiteId=${websiteId}, sessionId=${sessionId}`);
         return;
     }
-    const contentMessages = historySorted.filter((message) => {
-        return message.children.length === 1 && (message.children[0].role === messages_1.MessageRole.user ||
-            message.children[0].role === messages_1.MessageRole.assistant);
+    const contentMessages = history.filter((message) => {
+        return message.role == messages_1.MessageRole.assistant ||
+            message.role == messages_1.MessageRole.user;
     });
     const chatContext = contentMessages.map((message) => {
+        const childMessage = message.children[0];
+        const content = childMessage ? childMessage.content : "";
         return {
-            role: message.children[0].role,
-            content: message.children[0].content,
+            role: message.role,
+            content: content,
         };
     });
     const lastUserMessage = userMessages[userMessages.length - 1];
+    const queries = lastUserMessage.children.map((child) => {
+        if (!child.content) {
+            firebase_functions_1.logger.error(`Failed to retrieve children content from lastUserMessage=${JSON.stringify(lastUserMessage)}`);
+            res.status(400).send(`No content found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`);
+            return;
+        }
+        return child.content;
+    });
+    if (queries.length === 0) {
+        firebase_functions_1.logger.error(`Failed to retrieve children content from lastUserMessage=${JSON.stringify(lastUserMessage)}`);
+        res.status(400).send(`No query found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`);
+        return;
+    }
     const chromaAPIRequest = {
         maxDistance: 0.5,
         minContentLength: 20,
         query: {
             numResults: 5,
-            queries: [lastUserMessage.children[0].content],
+            queries,
         },
     };
     const queryAPIUrl = "https://chroma-z5eqvjec2q-uc.a.run.app/collections/hyu-startup-notice/query";
@@ -213,7 +203,6 @@ async function getReply(req, res) {
         return;
     }
     const queryResult = queryResults[0];
-    firebase_functions_1.logger.debug(`queryResult=${JSON.stringify(queryResult)}`);
     const retrievedDocuments = queryResult ? queryResult.ids.map((id, index) => {
         var _a, _b;
         return {
@@ -222,9 +211,9 @@ async function getReply(req, res) {
             content: queryResult.contents[index],
         };
     }) : [];
-    const promptFromRetrieval = `[${retrievedDocuments.map((document) => {
+    const promptFromRetrieval = retrievedDocuments.length > 0 ? `[${retrievedDocuments.map((document) => {
         return `{"title": ${document.title}, "content": ${document.content}}`;
-    }).join(", ")}]`;
+    }).join(", ")}]` : "NO DOCUMENTS RETRIEVED";
     // eslint-disable-next-line max-len
     const systemPrompt = "You are a chatbot called \"한양대학교 창업지원단 챗봇\"." +
         "User will give you a JSON object containing user's question and retrieved documents." +
@@ -247,7 +236,7 @@ async function getReply(req, res) {
     const userMessage = {
         role: messages_1.MessageRole.user,
         // eslint-disable-next-line max-len
-        content: `{"userQuestion": ${lastUserMessage.children[0].content}, "retrieval": ${promptFromRetrieval}}`,
+        content: `{"userQuestion": ${queries[0]}, "retrieval": ${promptFromRetrieval}}`,
     };
     const messages = [systemMessage, ...chatContext, userMessage];
     const openaiClient = new openai.OpenAI({ apiKey: openaiAPIKey });
@@ -275,10 +264,10 @@ async function getReply(req, res) {
             id: null,
             createdAt: null,
             deletedAt: null,
+            role: messages_1.MessageRole.assistant,
             children: [
                 {
                     title: null,
-                    role: messages_1.MessageRole.assistant,
                     content: reply,
                     imageUrl: null,
                     url: null,
@@ -292,16 +281,24 @@ async function getReply(req, res) {
             return;
         }
     }
+    if (!openaiReplyMessage) {
+        res.status(500).send("Internal server error, failed to save reply message");
+        return;
+    }
     let retrievalCarouselMessage = null;
+    if (retrievedDocuments.length === 0) {
+        res.status(200).send([openaiReplyMessage]);
+        return;
+    }
     try {
         retrievalCarouselMessage = await messages_1.messagesCollection.add({
             id: null,
             createdAt: null,
             deletedAt: null,
+            role: messages_1.MessageRole.assistant,
             children: retrievedDocuments.map((doc) => {
                 return {
                     title: doc.title,
-                    role: messages_1.MessageRole.assistant,
                     content: doc.content,
                     imageUrl: null,
                     url: doc.url,
@@ -316,18 +313,11 @@ async function getReply(req, res) {
         }
         res.status(500).send(JSON.stringify(error));
     }
-    if (!openaiReplyMessage) {
-        res.status(500).send("Internal server error, failed to save reply message");
-        return;
-    }
     if (!retrievalCarouselMessage) {
         res.status(500).send("Internal server error, failed to save retrieval carousel message");
         return;
     }
-    res.status(200).send([
-        openaiReplyMessage,
-        retrievalCarouselMessage,
-    ]);
+    res.status(200).send([openaiReplyMessage, retrievalCarouselMessage]);
 }
 exports.getReply = getReply;
 //# sourceMappingURL=messages.js.map

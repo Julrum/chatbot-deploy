@@ -13,7 +13,7 @@ var MessageRole;
 exports.messagesCollection = {
     get: async (websiteId, sessionId, messageId) => {
         const db = admin.firestore();
-        const message = await db
+        const _message = await db
             .collection(resource_1.ResourceName.Websites)
             .doc(websiteId)
             .collection(resource_1.ResourceName.Sessions)
@@ -21,10 +21,11 @@ exports.messagesCollection = {
             .collection(resource_1.ResourceName.Messages)
             .doc(messageId)
             .get();
-        if (!message.exists) {
+        if (!_message.exists) {
             throw new https_1.HttpsError("not-found", "Message not found");
         }
-        return message.data();
+        const message = (0, resource_1.convertResourceDates)(_message.data());
+        return message;
     },
     add: async (message, websiteId, sessionId) => {
         message.children.forEach((child) => {
@@ -67,9 +68,12 @@ exports.messagesCollection = {
             .doc(websiteId)
             .collection(resource_1.ResourceName.Sessions)
             .doc(sessionId)
-            .collection(resource_1.ResourceName.Messages);
+            .collection(resource_1.ResourceName.Messages)
+            .orderBy("createdAt", "asc");
         const messages = await ref.get();
-        return messages.docs.map((doc) => doc.data());
+        return messages.docs.map((doc) => {
+            return (0, resource_1.convertResourceDates)(doc.data());
+        });
     },
     listRecentN: async (websiteId, sessionId, n) => {
         const db = admin.firestore();
@@ -81,8 +85,16 @@ exports.messagesCollection = {
             .collection(resource_1.ResourceName.Messages)
             .orderBy("createdAt", "desc")
             .limit(n);
-        const messages = await ref.get();
-        return messages.docs.map((doc) => doc.data());
+        const _messages = await ref.get();
+        const messages = _messages.docs.map((doc) => {
+            return (0, resource_1.convertResourceDates)(doc.data());
+        });
+        const sortedMessages = messages.sort((a, b) => {
+            const lhs = a.createdAt ? a.createdAt : new Date(0);
+            const rhs = b.createdAt ? b.createdAt : new Date(0);
+            return lhs.getTime() - rhs.getTime();
+        });
+        return sortedMessages;
     },
 };
 //# sourceMappingURL=messages.js.map
