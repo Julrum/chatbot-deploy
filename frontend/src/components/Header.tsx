@@ -5,9 +5,6 @@ const Header = ({ imageUrl, name }: { imageUrl?: string; name?: string }) => (
       <p className="max" style={{ fontSize: "18px" }}>
         {name}
       </p>
-      <button aria-label="contact" className="circle transparent">
-        <i>headset_mic</i>
-      </button>
       <button
         aria-label="close"
         className="circle transparent"
