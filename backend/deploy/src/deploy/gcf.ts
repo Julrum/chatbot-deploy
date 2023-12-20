@@ -92,8 +92,14 @@ async function recoverGitignoreFromBakFile(sourceDir: string): Promise<void> {
 async function createNpmrc(sourceDir: string): Promise<void> {
   const npmrcFile = `${sourceDir}/.npmrc`;
   fs.writeFileSync(npmrcFile, "",{flag: 'w'});
+  const secretNpmToken = process.env.NPM_TOKEN;
+  if (!secretNpmToken) {
+    throw new Error('NPM_TOKEN is not set, aborting.');
+  } else {
+    console.debug(`Fetched NPM_TOKEN=${secretNpmToken.slice(0, 5)}...${secretNpmToken.slice(-5)}`)
+  }
   const lines = [
-    "//registry.npmjs.org/:_authToken=${NPM_TOKEN}"
+    `//registry.npmjs.org/:_authToken=${secretNpmToken}`,
   ]
   try {
     for (const line of lines) {
@@ -102,6 +108,16 @@ async function createNpmrc(sourceDir: string): Promise<void> {
   } catch (error) {
     throw error;
   }
+}
+
+/**
+ * Deletes .npmrc file for security reason
+ * @param sourceDir
+ * @returns Promise<void>
+ */
+async function deleteNpmrc(sourceDir: string): Promise<void> {
+  const npmrcFile = `${sourceDir}/.npmrc`;
+  fs.unlinkSync(npmrcFile);
 }
 
 export async function deploy(argv: Arguments) : Promise<void> {
@@ -152,8 +168,17 @@ export async function deploy(argv: Arguments) : Promise<void> {
     "--trigger-http",
     "--allow-unauthenticated",
     "--gen2",
-    "--set-secrets",
-    `NPM_TOKEN=projects/${argv.project}/secrets/orca-npm-token/versions/latest`,
+    "--set-build-env-vars=NPM_TOKEN=$(gcloud secrets versions access latest --secret=\"orca-npm-token\" --format=\"get(payload.data)\" | base64 --decode)",
+    "--set-env-vars=NPM_TOKEN=$(gcloud secrets versions access latest --secret=\"orca-npm-token\" --format=\"get(payload.data)\" | base64 --decode)",
+    // "--set-build-env-vars",
+    // "NPM_TOKEN=$(gcloud secrets versions access latest --secret orca-npm-token)"
+    // "--set-secrets",
+    // `NPM_TOKEN=projects/${argv.project}/secrets/orca-npm-token/versions/latest`,
+    // `--set-secrets="NPM_TOKEN=projects/${argv.project}/secrets/orca-npm-token/versions/latest"`,
+    // "--remove-secrets",
+    // `NPM_TOKEN`,
+    // "--update-secrets",
+    // `NPM_TOKEN=projects/${argv.project}/secrets/orca-npm-token/versions/latest`,
   ];
   if (argv.vpcConnector) {
     args.push("--vpc-connector", argv.vpcConnector);
@@ -172,6 +197,14 @@ export async function deploy(argv: Arguments) : Promise<void> {
     console.log(`Recovering ${argv.source}/.gitignore from .gitignore.bak...`);
     try {
       await recoverGitignoreFromBakFile(argv.source);
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+    try {
+      console.debug(`Deleting ${argv.source}/.npmrc...`);
+      await deleteNpmrc(argv.source);
+      console.log("Done.");
     } catch (err) {
       console.error(err);
       throw err;

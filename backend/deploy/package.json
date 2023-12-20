@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
+    "cli:chroma": "npm run build && node lib/cli/chroma.js",
     "config:local": "cp ./src/configs/local.ts ./src/configs/config.ts",
     "config:dev": "cp ./src/configs/dev.ts ./src/configs/config.ts",
     "config:prod": "cp ./src/configs/prod.ts ./src/configs/config.ts",
@@ -33,6 +34,7 @@
     "@google-cloud/iam": "^1.0.1",
     "@google-cloud/iam-credentials": "^3.0.1",
     "@orca.ai/pulse": "^1.0.23",
-    "google-auth-library": "^9.4.1"
+    "google-auth-library": "^9.4.1",
+    "readline": "^1.3.0"
   }
 }

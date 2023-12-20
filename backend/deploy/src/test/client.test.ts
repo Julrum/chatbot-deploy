@@ -11,17 +11,15 @@ async function cleanDB(client: Client) {
 
 let client: Client;
 let testCollection: Collection;
-beforeAll(async () => {
+beforeEach(async () => {
   const functionURL = process.env.FUNCTION_URL;
   if (!functionURL) {
     throw new Error('FUNCTION_URL is not set, it should be like: https://us-central1-<project-name>.cloudfunctions.net/<function-name> OR http://localhost:8080');
   }
   client = new Client(functionURL);
   await cleanDB(client);
-  const collectionName = `test-collection-${(new Date()).getTime()}`;
-  testCollection = await client.createCollection(collectionName);
 });
-afterAll(async () => {
+afterEach(async () => {
   if (testCollection === undefined) {
     return;
   }
@@ -30,6 +28,8 @@ afterAll(async () => {
 
 describe('Chroma Document CRUD', () => {
   it('Create and delete a document', async () => {
+    const testCollectionName = `test-collection-${(new Date()).getTime()}`;
+    testCollection = await client.createCollection(testCollectionName);
     const initialDocuments = await client.countDocumentsInCollection(testCollection.name);
     expect(initialDocuments).toBe(0);
 
@@ -58,25 +58,52 @@ describe('Chroma Document CRUD', () => {
     }));
     const finalLeftDocuments = await client.countDocumentsInCollection(testCollection.name);
     expect(finalLeftDocuments).toBe(0);
-  });
+  },
+  10000);
 });
 
-// describe('Chroma Collection CRUD', () => {
-//   it('Create and delete a collection', async () => {
-//     const initialCollections = await client.listCollections();
-//     expect(initialCollections.length).toBe(0);
+describe('Chroma Collection CRUD', () => {
+  it('Create and delete a collection', async () => {
+    const initialCollections = await client.listCollections();
+    expect(initialCollections.length).toBe(0);
 
-//     const newCollection = await client.createCollection(testCollection.name);
-//     expect(newCollection.name).toBe(testCollection.name);
+    const newCollection = await client.createCollection(testCollection.name);
+    expect(newCollection.name).toBe(testCollection.name);
 
-//     const collections = await client.listCollections();
-//     expect(collections.length).toBe(1);
+    const collections = await client.listCollections();
+    expect(collections.length).toBe(1);
 
-//     const collection = await client.getCollection(testCollection.name);
-//     expect(collection.name).toBe(testCollection.name);
+    const collection = await client.getCollection(testCollection.name);
+    expect(collection.name).toBe(testCollection.name);
 
-//     await client.deleteCollection(testCollection.name);
-//     const leftCollections = await client.listCollections();
-//     expect(leftCollections.length).toBe(0);
-//   });
-// });
+    await client.deleteCollection(testCollection.name);
+    const leftCollections = await client.listCollections();
+    expect(leftCollections.length).toBe(0);
+  }, 10000);
+});
+
+describe('Multiple Collection CRUD', () => {
+  it('Create and delete multiple collections', async () => {
+    const initialCollections = await client.listCollections();
+    expect(initialCollections.length).toBe(0);
+
+    const names = [];
+    const numCollections = 10;
+    for (let i = 0; i < numCollections; i++) {
+      names.push(`${testCollection.name}-${i}`);
+      await client.createCollection(names[i]);
+    }
+    const newCollections = await client.listCollections();
+    const sortedNames = names.sort();
+    const sortedFoundNames = newCollections.map(collection => collection.name).sort();
+    expect(newCollections.length).toBe(numCollections);
+    for (let i = 0; i < numCollections; i++) {
+      expect(sortedFoundNames[i]).toBe(sortedNames[i]);
+    }
+    await Promise.all(names.map(async name => {
+      await client.deleteCollection(name);
+    }));
+    const finalLeftCollections = await client.listCollections();
+    expect(finalLeftCollections.length).toBe(0);
+  }, 10000);
+});
