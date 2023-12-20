@@ -6,9 +6,15 @@ import {
   IncludeEnum, OpenAIEmbeddingFunction,
 } from "chromadb";
 import {SecretManagerServiceClient} from "@google-cloud/secret-manager";
+import {config} from "./configs/config";
+import {
+  Document, Query, QueryResult,
+  StringMessage, GetResult, CountResult} from "@orca.ai/pulse";
+
 
 const app = express();
-
+app.use(express.urlencoded({extended: true}));
+app.use(express.json());
 /**
  * @return {Promise<string>} openai api key.
  */
@@ -25,7 +31,7 @@ async function accessOpenAIAPIKey() : Promise<string> {
   return openaiAPIKey;
 }
 
-const client = new ChromaClient({path: "http://10.128.0.4:8000"});
+const client = new ChromaClient({path: config.chromaHost});
 // const client = new ChromaClient({path: "localhost:8000"});
 
 app.get("/ping", (req, res) => {
@@ -43,11 +49,11 @@ app.post("/collections/:collectionId", async (req, res) => {
     const collection: Collection = await client.createCollection({
       name: collectionId,
     });
-    res.status(200).send(
-      `Created collection ${collection.id}.`);
+    res.status(200).send(collection);
   } catch (e) {
-    res.status(409).send(
-      `Collection ${collectionId} already exists.`);
+    res.status(409).send({
+      message: `Collection ${collectionId} already exists.`,
+    });
   }
 });
 
@@ -63,9 +69,10 @@ app.get("/collections/:collectionId", async (req, res) => {
     const collection = await client.getCollection({name: collectionId});
     res.status(200).send(collection);
   } catch (e) {
-    res.status(404).send(
-      `Collection ${collectionId} not found. 
-      You should provide "name" of the collection, not "id".`);
+    res.status(404).send({
+      message: `Collection ${collectionId} not found. \
+      You should provide "name" of the collection, not "id".`,
+    });
   }
 });
 // DELETE /collections/1234
@@ -73,35 +80,33 @@ app.delete("/collections/:collectionId", async (req, res) => {
   const {collectionId} = req.params;
   try {
     await client.deleteCollection({name: collectionId});
-    res.status(200).send(`Collection ${collectionId} deleted.`);
+    res.status(200).send({
+      message: `Collection ${collectionId} deleted.`,
+    } as StringMessage);
   } catch (e) {
-    res.status(404)
-      .send(`Failed to delete collection with name ${collectionId}.`);
+    res.status(404).send({
+      message: `Failed to delete collection with name ${collectionId}.`,
+    } as StringMessage);
   }
 });
-
-type Metadata = Record<string, string | number | boolean>;
-interface Document {
-  id: string;
-  metadata: Metadata;
-  content: string;
-}
-
-interface QueryResult {
-  ids: string[];
-  metadatas: (Metadata | null)[];
-  contents: (string | null)[];
-  distances: (number | null)[];
-}
 
 // POST /collections/1234/documents/
 app.post("/collections/:collectionId/documents",
   async (req, res) => {
     logger.debug("POST /collections/:collectionId/documents called.");
     const {collectionId} = req.params;
+    if (req.body === undefined) {
+      console.error(`Request body not provided, got ${JSON.stringify(req)}`);
+      res.status(400).send({
+        message: "Request body not provided.",
+      });
+      return;
+    }
     const documents: Document[] = req.body.documents;
     if (!documents) {
-      res.status(400).send("Documents not provided.");
+      res.status(400).send({
+        message: "Documents not provided.",
+      } as StringMessage);
       return;
     }
     const ids = documents.map((doc) => doc.id);
@@ -112,7 +117,9 @@ app.post("/collections/:collectionId/documents",
     try {
       openaiAPIKey = await accessOpenAIAPIKey();
     } catch (e) {
-      res.status(500).send("Failed to access openai api key.");
+      res.status(500).send({
+        message: "Failed to access openai api key.",
+      } as StringMessage);
       return;
     }
     const embeddingFunction = new OpenAIEmbeddingFunction({
@@ -126,21 +133,23 @@ app.post("/collections/:collectionId/documents",
       });
     } catch (e) {
       logger.error(`Failed to get collection: ${e}`);
-      res.status(404).send(`Collection "${collectionId}" not found.`);
+      res.status(404).send({
+        message: `Collection "${collectionId}" not found.`,
+      } as StringMessage);
       return;
     }
     try {
       if (ids.length == 0) {
-        res.status(400)
-          .send("At least one document should be provided, got 0.");
+        res.status(400).send({
+          message: "At least one document should be provided, got 0.",
+        } as StringMessage);
         return;
       }
       if (ids.length != metadatas.length || ids.length != contents.length) {
-        res.status(500).send(`\
-        length of ids(${ids.length}), \
-        metadatas(${metadatas.length}), \
-        contents(${contents.length}) \
-        should be the same.`);
+        res.status(500).send({
+          // eslint-disable-next-line max-len
+          message: `length of ids(${ids.length}), metadatas(${metadatas.length}), contents(${contents.length}) should be the same.`,
+        } as StringMessage);
         return;
       }
       let embeddings: number[][];
@@ -148,7 +157,9 @@ app.post("/collections/:collectionId/documents",
         embeddings = await embeddingFunction.generate(contents);
       } catch (e) {
         logger.error(`Failed to generate embeddings: ${e}`);
-        res.status(500).send(`Failed to generate embeddings: ${e}`);
+        res.status(500).send({
+          message: `Failed to generate embeddings: ${e}`,
+        } as StringMessage);
         return;
       }
       const results = await collection.add({
@@ -158,13 +169,19 @@ app.post("/collections/:collectionId/documents",
         embeddings: embeddings,
       });
       if (!results) {
-        res.status(500).send("Failed to add documents.");
+        res.status(500).send({
+          message: "Failed to add documents.",
+        } as StringMessage);
         return;
       }
-      res.status(200).send(`Successfully added ${documents.length} documents.`);
+      res.status(200).send({
+        message: `Successfully added ${documents.length} documents.`,
+      } as StringMessage);
     } catch (e) {
       logger.error(`Failed to add documents: ${e}`);
-      res.status(500).send(`Failed to add documents: ${e}`);
+      res.status(500).send({
+        message: `Failed to add documents: ${e}`,
+      } as StringMessage);
     }
   });
 // GET /collections/1234/documents/some-doc-id
@@ -177,10 +194,16 @@ app.get("/collections/:collectionId/documents/:documentId",
       const collection = await client.getCollection({name: collectionId});
       const document = await collection.get({ids: [documentId]});
       if (document.ids.length === 0) {
-        res.status(404).send(`Document ${documentId} not found.`);
+        const allDocs = await collection.peek({limit: 99999});
+        console.error(`Dump of all IDs: ${allDocs.ids}`);
+        // eslint-disable-next-line max-len
+        console.error(`Document ${documentId} not found, got ${JSON.stringify(document)}`);
+        res.status(404).send({
+          message: `Document ${documentId} not found.`,
+        } as StringMessage);
         return;
       }
-      res.status(200).send(document);
+      res.status(200).send(document as GetResult);
     } catch (e) {
       res.status(500).send(e);
     }
@@ -191,7 +214,9 @@ app.delete("/collections/:collectionId/documents/:documentId",
     const {collectionId, documentId} = req.params;
     const collection = await client.getCollection({name: collectionId});
     await collection.delete({ids: [documentId]});
-    res.status(200).send(`Document ${documentId} deleted.`);
+    res.status(200).send({
+      message: `Document ${documentId} deleted.`,
+    } as StringMessage);
   });
 // GET /collections/1234/count
 app.get("/collections/:collectionId/count", async (req, res) => {
@@ -201,18 +226,15 @@ app.get("/collections/:collectionId/count", async (req, res) => {
     const documentCount = await collection.count();
     logger.info(`Collection ${collectionId} has ${documentCount} documents.`);
     res.status(200).send({
-      "collectionId": collectionId,
-      "count": documentCount,
-    });
+      collectionId: collectionId,
+      count: documentCount,
+    } as CountResult);
   } catch (e) {
-    res.status(404).send(`Collection ${collectionId} not found.`);
+    res.status(404).send({
+      message: `Collection ${collectionId} not found.`,
+    } as StringMessage);
   }
 });
-
-interface Query {
-  numResults: number;
-  queries: string[];
-}
 
 // POST /collections/1234/query
 app.post("/collections/:collectionId/query",
@@ -228,17 +250,23 @@ app.post("/collections/:collectionId/query",
     });
     const query: Query = req.body.query;
     if (!query) {
-      res.status(400).send("Query not provided.");
+      res.status(400).send({
+        message: "Query not provided.",
+      } as StringMessage);
       return;
     }
     const maxDistance: number = req.body.maxDistance;
     if (!maxDistance) {
-      res.status(400).send("maxDistance not provided.");
+      res.status(400).send({
+        message: "maxDistance not provided.",
+      } as StringMessage);
       return;
     }
     const minContentLength: number = req.body.minContentLength;
     if (!minContentLength) {
-      res.status(400).send("minContentLength not provided.");
+      res.status(400).send({
+        message: "minContentLength not provided.",
+      } as StringMessage);
       return;
     }
 
@@ -264,17 +292,21 @@ app.post("/collections/:collectionId/query",
         distances: distances[i],
       } as QueryResult));
       const filterQueryResult = (result: QueryResult) => {
+        const distances = result.distances ?? [];
+        const contents = result.contents ?? [];
+        const metadatas = result.metadatas ?? [];
+
         const validIndicies = result.ids.map((id, i) => {
-          const distance = result.distances[i] ?? Infinity;
-          const content = result.contents[i] ?? "";
+          const distance = distances[i] ?? Infinity;
+          const content = contents[i] ?? "";
           return distance <= maxDistance && content.length >= minContentLength;
         });
         const filteredIds = result.ids.filter((_, i) => validIndicies[i]);
-        const filteredMetadata = result.metadatas.filter(
+        const filteredMetadata = metadatas.filter(
           (_, i) => validIndicies[i]);
-        const filteredContent = result.contents.filter(
+        const filteredContent = contents.filter(
           (_, i) => validIndicies[i]);
-        const filteredDistances = result.distances.filter(
+        const filteredDistances = distances.filter(
           (_, i) => validIndicies[i]);
         const deduplicatedIds = [...new Set(filteredIds)];
         const deduplicatedMetadata = deduplicatedIds.map((id) => {
@@ -302,12 +334,12 @@ app.post("/collections/:collectionId/query",
       const filteredQueryResults = results.map(filterQueryResult);
       res.status(200).send(filteredQueryResults);
     } catch (e) {
-      res.status(500).send(`Failed to query: ${e}`);
+      res.status(500).send({
+        message: `Failed to query: ${e}`,
+      } as StringMessage);
     }
   }
 );
 
-// app.listen(8080, () => {
-//   logger.info("Listening on port 8080.");
-// });
+config.listen(app);
 export const chroma = onRequest(app);

@@ -9,7 +9,9 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "local": "npm run build && node --inspect lib/index.js"
+    "config:local": "cp ./src/configs/local.ts ./src/configs/config.ts",
+    "config:dev": "cp ./src/configs/dev.ts ./src/configs/config.ts",
+    "config:prod": "cp ./src/configs/prod.ts ./src/configs/config.ts"
   },
   "engines": {
     "node": "18"
@@ -18,6 +20,7 @@
   "dependencies": {
     "@google-cloud/functions-framework": "^3.3.0",
     "@google-cloud/secret-manager": "^5.0.1",
+    "@orca.ai/pulse": "^1.0.23",
     "chromadb": "^1.6.1",
     "cohere-ai": "^6.2.2",
     "firebase-admin": "^11.8.0",
