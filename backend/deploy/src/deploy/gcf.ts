@@ -26,7 +26,7 @@ export enum FunctionName {
   chat = 'chat',
   crawler = 'crawler',
   chroma = 'chroma',
-  prompt = 'prompt',
+  // prompt = 'prompt',
 }
 
 export enum VPCConnector {

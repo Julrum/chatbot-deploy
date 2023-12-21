@@ -4,20 +4,28 @@ import {onRequest} from "firebase-functions/v2/https";
 import {initializeApp} from "firebase-admin/app";
 import * as express from "express";
 import {crawlThreads} from "./crawl";
+import {Thread} from "./model";
 import {
-  CrawlConfig, Document, Metadata, Thread, ThreadType,
-} from "./model";
-import axios, {AxiosResponse} from "axios";
+  Document, Metadata, ChromaClient, CrawlConfig,
+  PingResponse, StringMessage,
+} from "@orca.ai/pulse";
+import {config} from "./configs/config";
 
 initializeApp();
 const app = express();
+
 app.use(express.json());
 app.use(express.urlencoded( {extended: false} ));
+
+app.get("/ping", (req, res) => {
+  res.status(200).send({
+    message: "pong",
+    timestamp: (new Date()).toISOString(),
+  } as PingResponse);
+});
+
 app.post("/crawl", async (req, res) => {
   const crawlConfig: CrawlConfig = req.body;
-  // TODO: Fix chromaBaseUrl and chromaCollectionId
-  // to be configurable by env vars.
-  const chromaBaseUrl = "https://chroma-z5eqvjec2q-uc.a.run.app";
   const chromaCollectionId = crawlConfig.collectionName;
 
   let threads: Thread[] = [];
@@ -31,10 +39,14 @@ app.post("/crawl", async (req, res) => {
   } catch (e) {
     if (e instanceof Error) {
       logger.error(e);
-      res.status(500).send(`Failed to crawl threads. \
-      name=${e.name}, message=${e.message}, stack=${e.stack}`);
+      res.status(500).send({
+        message: `Failed to crawl threads. \
+      name=${e.name}, message=${e.message}, stack=${e.stack}`,
+      } as StringMessage);
     } else {
-      res.status(500).send(`Failed to crawl threads. ${e}`);
+      res.status(500).send({
+        message: `Failed to crawl threads. ${e}`,
+      } as StringMessage);
     }
   }
 
@@ -63,79 +75,44 @@ app.post("/crawl", async (req, res) => {
       imageUrls: JSON.stringify(thread.imageUrls),
     } as Metadata,
     content: thread.content,
-  }));
-  // logger.debug(`Sending ${documents.length} documents to Chroma API.`);
-  // logger.debug(`documents=${JSON.stringify({
-  //   documents: documents,
-  // })}`);
-
-  // Only for local testing.
-  // res.status(200).send(`Crawled ${threads.length} threads.`);
-  // return;
-
-  // eslint-disable-next-line no-unreachable
+  } as Document));
   if (documents.length == 0) {
     const err = `No documents to send to Chroma API. \
     # of threads=${threads.length}, \
     # of splitted threads=${splittedThreads.length}, \
     # of documents=${documents.length}`;
     logger.error(err);
-    res.status(500).send(err);
+    res.status(500).send({
+      message: err,
+    } as StringMessage);
     return;
   }
 
-  logger.debug(
-    `POST ${chromaBaseUrl}/collections/${chromaCollectionId}/documents`);
-
-  let chromaRes: AxiosResponse;
+  const chromaClient = new ChromaClient(config.chromaFunctionUrl);
   try {
-    chromaRes = await axios.post(
-      `${chromaBaseUrl}/collections/${chromaCollectionId}/documents`,
-      {
-        documents: documents,
-      },
-    );
+    logger.debug(`Sending ${documents.length} documents to Chroma API.`);
+    await chromaClient.addDocuments(chromaCollectionId, documents);
+    // eslint-disable-next-line max-len
+    logger.debug(`Successfully sent ${documents.length} documents to Chroma API.`);
+    res.status(200).send({
+      message: `Successfully sent ${documents.length} documents to Chroma API.`,
+    } as StringMessage);
   } catch (e) {
     if (e instanceof Error) {
-      logger.error(e);
-      res.status(500).send(
-        `Failed to send documents to Chroma API. error=${e}`);
-      // res.status(500).send(`Failed to send documents to Chroma API. \
-      // name=${e.name}, message=${e.message}, stack=${e.stack}`);
+      logger.error(`Failed to send documents to Chroma API. \
+      name=${e.name}, message=${e.message}, stack=${e.stack}`);
+      res.status(500).send({
+        message: `Failed to send documents to Chroma API. error=${e}`,
+      } as StringMessage);
     } else {
       logger.error(`Failed to send documents to Chroma API. ${e}`);
-      res.status(500).send(`Failed to send documents to Chroma API. ${e}`);
+      res.status(500).send({
+        message: `Failed to send documents to Chroma API. ${e}`,
+      } as StringMessage);
     }
-    return;
-  }
-
-  logger.debug(`Chroma API response: ${chromaRes.status}`);
-
-  const textThreadCount = threads.filter((t) => {
-    return t.type == ThreadType.text;
-  }).length;
-  switch (chromaRes.status) {
-  case 200:
-    logger.info(`Successfully crawled ${textThreadCount} threads.`);
-    res.status(200).send(`Successfully crawled ${textThreadCount} threads.`);
-    break;
-  default:
-    logger.error(`Failed to crawl threads, Chroma API returned \
-      status=${chromaRes.status}`);
-    res.status(500).send(`Failed to crawl threads. Chroma API ended with \
-      status=${chromaRes.status}`);
-    // logger.error(`Failed to crawl threads. \
-    //   status=${chromaRes.status}, data=${chromaRes.data}`);
-    // res.status(500).send(`Failed to crawl threads. Chroma API ended with \
-    //   status=${chromaRes.status}, data=${chromaRes.data}`);
     return;
   }
 });
 
-// Only for local testing.
-// app.listen(8080, () => {
-//   logger.info("Crawler started listening on port 8080.");
-// }
-// );
-
+config.listen(app);
 export const crawler = onRequest(app);

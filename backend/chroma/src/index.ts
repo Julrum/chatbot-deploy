@@ -9,7 +9,7 @@ import {SecretManagerServiceClient} from "@google-cloud/secret-manager";
 import {config} from "./configs/config";
 import {
   Document, Query, QueryResult,
-  StringMessage, GetResult, CountResult} from "@orca.ai/pulse";
+  StringMessage, GetResult, CountResult, PingResponse} from "@orca.ai/pulse";
 
 
 const app = express();
@@ -39,7 +39,7 @@ app.get("/ping", (req, res) => {
   res.status(200).send({
     "message": "pong",
     "timestamp": new Date().toISOString(),
-  });
+  } as PingResponse);
 });
 
 // POST /collections/1234
@@ -53,7 +53,7 @@ app.post("/collections/:collectionId", async (req, res) => {
   } catch (e) {
     res.status(409).send({
       message: `Collection ${collectionId} already exists.`,
-    });
+    } as StringMessage);
   }
 });
 
@@ -72,7 +72,7 @@ app.get("/collections/:collectionId", async (req, res) => {
     res.status(404).send({
       message: `Collection ${collectionId} not found. \
       You should provide "name" of the collection, not "id".`,
-    });
+    } as StringMessage);
   }
 });
 // DELETE /collections/1234
@@ -99,7 +99,7 @@ app.post("/collections/:collectionId/documents",
       console.error(`Request body not provided, got ${JSON.stringify(req)}`);
       res.status(400).send({
         message: "Request body not provided.",
-      });
+      } as StringMessage);
       return;
     }
     const documents: Document[] = req.body.documents;

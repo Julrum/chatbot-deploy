@@ -10,7 +10,10 @@
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "local": "tsc && node --inspect lib/index.js",
-    "ocr": "tsc && node --inspect lib/ocr.js"
+    "ocr": "tsc && node --inspect lib/ocr.js",
+    "config:local": "cp ./src/configs/local.ts ./src/configs/config.ts",
+    "config:dev": "cp ./src/configs/dev.ts ./src/configs/config.ts",
+    "config:prod": "cp ./src/configs/prod.ts ./src/configs/config.ts"
   },
   "engines": {
     "node": "16"
@@ -20,8 +23,8 @@
     "@google-cloud/functions-framework": "^3.3.0",
     "@google-cloud/secret-manager": "^5.0.1",
     "@google-cloud/vision": "^4.0.2",
+    "@orca.ai/pulse": "^1.0.25",
     "axios": "^1.6.2",
-    "chromadb": "^1.6.1",
     "cohere-ai": "^6.2.2",
     "firebase-admin": "^11.8.0",
     "firebase-functions": "^4.3.1",

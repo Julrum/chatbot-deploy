@@ -1,6 +1,9 @@
-import { Client, Collection, Document } from "@orca.ai/pulse";
+import { ChromaClient, Collection, Document } from "@orca.ai/pulse";
+import { getFunctionURLFromEnv } from "./common";
+import { FunctionName } from "../deploy/gcf";
 
-async function cleanDB(client: Client) {
+
+export async function cleanDB(client: ChromaClient) {
   const collections = await client.listCollections();
   await Promise.all(collections.map(async collection => {
     await client.deleteCollection(collection.name);
@@ -9,14 +12,12 @@ async function cleanDB(client: Client) {
   expect(leftCollections.length).toBe(0);
 }
 
-let client: Client;
+export let client: ChromaClient;
 let testCollection: Collection;
 beforeEach(async () => {
-  const functionURL = process.env.FUNCTION_URL;
-  if (!functionURL) {
-    throw new Error('FUNCTION_URL is not set, it should be like: https://us-central1-<project-name>.cloudfunctions.net/<function-name> OR http://localhost:8080');
-  }
-  client = new Client(functionURL);
+  const functionURL = getFunctionURLFromEnv(FunctionName.chroma);
+  console.debug(`chromaURL: ${functionURL}`)
+  client = new ChromaClient(functionURL);
   await cleanDB(client);
 });
 afterEach(async () => {

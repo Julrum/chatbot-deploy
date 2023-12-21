@@ -1,14 +1,5 @@
-import {Client, Collection, Document} from "@orca.ai/pulse";
-import {createInterface} from "readline";
-
-function question(questionText: string): Promise<string> {
-  const rl = createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-  return new Promise<string>(resolve => rl.question(questionText, resolve))
-    .finally(() => rl.close());
-}
+import {ChromaClient, Collection, Document} from "@orca.ai/pulse";
+import {question} from "./common";
 
 interface ChromaURI {
   collection?: string;
@@ -27,9 +18,9 @@ async function main() {
   process.stdin.setEncoding('utf8');
   if (!process.argv[2]) {
     while (true) {
-      const opt = await question("Use default API URL (http://localhost:8080)? [y/n]: ");
+      const opt = await question("Use default API URL (http://localhost:8081)? [y/n]: ");
       if (opt === "y") {
-        process.argv[2] = "http://localhost:8080";
+        process.argv[2] = "http://localhost:8081";
       } else if (opt === "n") {
         console.log("Bye");
         process.exit(0);
@@ -41,13 +32,16 @@ async function main() {
     }
   }
   const apiURL = process.argv[2];
-  const client = new Client(apiURL);
+  const client = new ChromaClient(apiURL);
   const quits = ["exit", "quit", "q", "bye"];
   console.log("Welcome to Chroma DB Console");
   console.log("Using API at: " + apiURL);
   while (true) {
-    const line = await question("Enter command: ");
-    if (!line || quits.includes(line)) {
+    const line = await question(">>> ");
+    if (!line) {
+      continue;
+    }
+    if (quits.includes(line)) {
       console.log("Bye");
       break;
     }

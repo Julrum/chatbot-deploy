@@ -5,5 +5,5 @@ var ThreadType;
 (function (ThreadType) {
     ThreadType["text"] = "text";
     ThreadType["ocr"] = "ocr";
-})(ThreadType || (exports.ThreadType = ThreadType = {}));
+})(ThreadType = exports.ThreadType || (exports.ThreadType = {}));
 //# sourceMappingURL=model.js.map

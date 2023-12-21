@@ -1,0 +1,17 @@
+{
+  "chat": {
+    "local": "http://localhost:8080",
+    "dev": "https://us-central1-chatbot-dev-406508.cloudfunctions.net/chat",
+    "prod": "https://us-central1-chatbot-32ff4.cloudfunctions.net/chat"
+  },
+  "chroma": {
+    "local": "http://localhost:8081",
+    "dev": "https://us-central1-chatbot-dev-406508.cloudfunctions.net/chroma",
+    "prod": "https://us-central1-chatbot-32ff4.cloudfunctions.net/chroma"
+  },
+  "crawler": {
+    "local": "http://localhost:8082",
+    "dev": "https://us-central1-chatbot-dev-406508.cloudfunctions.net/crawler",
+    "prod": "https://us-central1-chatbot-32ff4.cloudfunctions.net/crawler"
+  }
+}
