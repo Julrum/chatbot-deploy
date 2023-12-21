@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "cli:chroma": "npm run build && node lib/cli/chroma.js",
+    "cli:chroma:local": "npm run build && node lib/cli/chroma.js localhost:8080",
+    "cli:chroma:dev": "npm run build && node lib/cli/chroma.js https://us-central1-chatbot-dev-406508.cloudfunctions.net/chroma",
+    "cli:chroma:prod": "npm run build && node lib/cli/chroma.js https://us-central1-chatbot-32ff4.cloudfunctions.net/chroma",
     "config:local": "cp ./src/configs/local.ts ./src/configs/config.ts",
     "config:dev": "cp ./src/configs/dev.ts ./src/configs/config.ts",
     "config:prod": "cp ./src/configs/prod.ts ./src/configs/config.ts",
@@ -33,8 +35,7 @@
     "@google-cloud/functions": "^3.0.1",
     "@google-cloud/iam": "^1.0.1",
     "@google-cloud/iam-credentials": "^3.0.1",
-    "@orca.ai/pulse": "^1.0.23",
-    "google-auth-library": "^9.4.1",
-    "readline": "^1.3.0"
+    "@orca.ai/pulse": "^1.0.24",
+    "google-auth-library": "^9.4.1"
   }
 }

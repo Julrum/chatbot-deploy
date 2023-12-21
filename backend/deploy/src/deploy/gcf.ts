@@ -1,6 +1,5 @@
-import {spawn} from 'child_process';
-import {promisify} from 'util';
 import * as fs from 'fs';
+import { runCommand } from './run-command';
 
 export enum Phase {
   dev = 'dev',
@@ -58,11 +57,7 @@ async function excludeLibFromGitignore(sourceDir: string): Promise<void> {
     "/lib\\/\\*\\*\\/\\*.js/d",
     `${sourceDir}/.gitignore`,
   ];
-  spawn("sed", args, {
-    cwd: process.cwd(),
-    // detached: true,
-    stdio: 'inherit',
-  });
+  await runCommand("sed", args);
 }
 
 /**
@@ -71,16 +66,11 @@ async function excludeLibFromGitignore(sourceDir: string): Promise<void> {
  * @return Promise<void>
  */
 async function recoverGitignoreFromBakFile(sourceDir: string): Promise<void> {
-  const spawnAsync = promisify(spawn);
   const args = [
     `${sourceDir}/.gitignore.bak`,
     `${sourceDir}/.gitignore`,
   ];
-  await spawnAsync("mv", args, {
-    cwd: process.cwd(),
-    detached: true,
-    stdio: 'inherit',
-  });
+  await runCommand("mv", args);
 }
 
 /**
@@ -148,7 +138,6 @@ export async function deploy(argv: Arguments) : Promise<void> {
     throw err;
   }
   console.log(`Deploying ${argv.functionName} to ${argv.project}...`);
-  const spawnAsync = promisify(spawn)
   const args = [
     "functions",
     "deploy",
@@ -170,15 +159,6 @@ export async function deploy(argv: Arguments) : Promise<void> {
     "--gen2",
     "--set-build-env-vars=NPM_TOKEN=$(gcloud secrets versions access latest --secret=\"orca-npm-token\" --format=\"get(payload.data)\" | base64 --decode)",
     "--set-env-vars=NPM_TOKEN=$(gcloud secrets versions access latest --secret=\"orca-npm-token\" --format=\"get(payload.data)\" | base64 --decode)",
-    // "--set-build-env-vars",
-    // "NPM_TOKEN=$(gcloud secrets versions access latest --secret orca-npm-token)"
-    // "--set-secrets",
-    // `NPM_TOKEN=projects/${argv.project}/secrets/orca-npm-token/versions/latest`,
-    // `--set-secrets="NPM_TOKEN=projects/${argv.project}/secrets/orca-npm-token/versions/latest"`,
-    // "--remove-secrets",
-    // `NPM_TOKEN`,
-    // "--update-secrets",
-    // `NPM_TOKEN=projects/${argv.project}/secrets/orca-npm-token/versions/latest`,
   ];
   if (argv.vpcConnector) {
     args.push("--vpc-connector", argv.vpcConnector);
@@ -186,11 +166,7 @@ export async function deploy(argv: Arguments) : Promise<void> {
   try {
     const command = `gcloud ${args.join(" ")}`;
     console.log(`Running: ${command}`);
-    await spawnAsync("gcloud", args, {
-      cwd: process.cwd(),
-      detached: true,
-      stdio: 'inherit',
-    });
+    await runCommand("gcloud", args);
   } catch (err) {
     console.error(err);
   } finally {

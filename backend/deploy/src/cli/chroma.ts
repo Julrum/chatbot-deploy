@@ -62,6 +62,15 @@ async function main() {
     switch (command) {
       case "help":
         break;
+      case "ping":
+        try {
+          const res = await client.ping();
+          console.log(`Ping response: ${JSON.stringify(res)}`);
+        } catch (error) {
+          console.error(error);
+          continue;
+        }
+        break;
       case "create":
         if (!uri.collection) {
           console.log("Please specify URI like: <collection>/<document> or <collection>");

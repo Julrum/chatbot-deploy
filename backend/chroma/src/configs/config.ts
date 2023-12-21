@@ -1,10 +1,6 @@
 import {Express} from "express";
-
 export const config = {
-  chromaHost: "http://localhost:8000",
-  listen: (app: Express) => {
-    app.listen(8080, () => {
-      console.log("Server listening on port 8080");
-    });
-  },
+  chromaHost: "http://10.128.0.4:8000",
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  listen: (app: Express) => {},
 };
