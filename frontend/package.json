@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@orca.ai/pulse": "^1.0.38",
     "beercss": "^3.4.10",
     "dayjs": "^1.11.10",
     "material-dynamic-colors": "^1.1.0",

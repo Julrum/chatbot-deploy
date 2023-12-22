@@ -1,8 +1,9 @@
 import styled from "styled-components";
+import { Message } from "@orca.ai/pulse";
 
 import { dayFormatter } from "../utils/dayFormatter";
 
-const Paragraph = styled.p<{ role: "assistant" | "user" }>`
+const Paragraph = styled.p<Pick<Message, "role">>`
   color: #808080;
   flex-grow: 1;
   font-size: 12px;
@@ -15,13 +16,10 @@ const Paragraph = styled.p<{ role: "assistant" | "user" }>`
 
 const Timestamp = ({
   role,
-  time,
-}: {
-  role: "assistant" | "user";
-  time: string;
-}) => (
+  createdAt,
+}: Pick<Message, "role" | "createdAt">) => (
   <Paragraph role={role}>
-    {dayFormatter(new Date(time), "LT", { locale: "ko", isZuluTime: true })}
+    {dayFormatter(createdAt, "LT", { locale: "ko", isZuluTime: true })}
   </Paragraph>
 );
 

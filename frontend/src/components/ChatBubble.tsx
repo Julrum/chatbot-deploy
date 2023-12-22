@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import styled, { css } from "styled-components";
-
-import type { ChildMessageProps, MessageProps } from "../types/message";
+import type { ChildMessage, Message } from "@orca.ai/pulse";
 
 const Bubble = styled.article<{ $isCard: boolean }>`
   box-shadow: none;
@@ -65,8 +64,8 @@ const ChatBubble = ({
   role,
   title,
   url,
-}: Omit<ChildMessageProps, "content"> &
-  Pick<MessageProps, "role"> & {
+}: Omit<ChildMessage, "content"> &
+  Pick<Message, "role"> & {
     content: ReactNode;
     defaultImage: string;
   }) => {

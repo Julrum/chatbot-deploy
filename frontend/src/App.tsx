@@ -2,17 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import Skeleton from "react-loading-skeleton";
 import Carousel from "react-slick";
 import styled from "styled-components";
+import { ChatClient, MessageRole } from "@orca.ai/pulse";
+import type { Message, Website } from "@orca.ai/pulse";
 
-import { getMessages, getReply, sendMessage } from "./api/message";
-import { createSession, getSession } from "./api/session";
-import { getWebsiteData } from "./api/website";
 import ChatBubble from "./components/ChatBubble";
 import Disclaimer from "./components/Disclaimer";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
 import Timestamp from "./components/Timestamp";
-import type { MessageProps } from "./types/message";
-import type { WebsiteProps } from "./types/website";
 
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -67,12 +64,14 @@ const App = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<MessageProps[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [sessionId, setSessionId] = useState(localStorage.getItem("cb_id"));
-  const [websiteData, setWebsiteData] = useState<WebsiteProps>();
+  const [websiteData, setWebsiteData] = useState<Website>();
   const [websiteId] = useState(window.location.pathname.split("/")[1]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const chatClient = new ChatClient(process.env.REACT_APP_API_URL ?? "");
 
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -85,10 +84,19 @@ const App = () => {
     };
 
     const setSession = async () => {
-      const newSessionID = await createSession(websiteId);
+      const newSessionID = await chatClient.addSession(websiteId, {
+        id: null,
+        createdAt: null,
+        deletedAt: null,
+      });
+      if (newSessionID.id === null)
+        throw new Error("세션 생성에 실패했습니다.");
       localStorage.setItem("cb_id", newSessionID.id);
       setSessionId(newSessionID.id);
-      const newMessages = await getMessages(websiteId, newSessionID.id);
+      const newMessages = await chatClient.listMessages(
+        websiteId,
+        newSessionID.id
+      );
       setMessages(newMessages);
     };
 
@@ -98,14 +106,17 @@ const App = () => {
           setSession();
         } else {
           try {
-            await getSession(websiteId, sessionId);
-            const newMessages = await getMessages(websiteId, sessionId);
+            await chatClient.getSession(websiteId, sessionId);
+            const newMessages = await chatClient.listMessages(
+              websiteId,
+              sessionId
+            );
             setMessages(newMessages);
           } catch {
             setSession();
           }
         }
-        const newWebsiteData = await getWebsiteData(websiteId);
+        const newWebsiteData = await chatClient.getWebsite(websiteId);
         setWebsiteData(newWebsiteData);
         theme(
           newWebsiteData.primaryColor ?? newWebsiteData.imageUrl ?? "#3d7cc9"
@@ -131,18 +142,29 @@ const App = () => {
       if (sessionId) {
         if (!isSending && message) {
           setIsSending(true);
-          setMessages([
-            ...messages,
-            {
-              role: "user",
-              children: [{ content: message }],
-              id: "temp",
-              createdAt: new Date().toISOString(),
-            },
-          ]);
+          const messageToSend = {
+            role: MessageRole.user,
+            children: [
+              { title: null, content: message, imageUrl: null, url: null },
+            ],
+            id: "temp",
+            createdAt: new Date(),
+            deletedAt: null,
+          };
+          setMessages([...messages, messageToSend]);
           setMessage("");
-          const newMessage = await sendMessage(websiteId, sessionId, message);
-          const reply = await getReply(websiteId, sessionId, newMessage.id);
+          const newMessage = await chatClient.addMessage(
+            websiteId,
+            sessionId,
+            messageToSend
+          );
+          if (newMessage.id === null)
+            throw new Error("메시지 전송에 실패했습니다. 새로고침 해주세요.");
+          const reply = await chatClient.getRepliesOfMessage(
+            websiteId,
+            sessionId,
+            newMessage.id
+          );
           setMessages([...messages, newMessage, ...reply]);
           setIsSending(false);
         }
@@ -248,8 +270,8 @@ const App = () => {
             messages[messages.length - 1].createdAt && (
               <div style={{ padding: "8px 16px" }}>
                 <Timestamp
+                  createdAt={messages[messages.length - 1].createdAt}
                   role={messages[messages.length - 1].role}
-                  time={messages[messages.length - 1].createdAt}
                 />
               </div>
             )}
@@ -261,8 +283,11 @@ const App = () => {
                     <Skeleton />
                   </div>
                 }
-                role="assistant"
+                imageUrl={null}
+                title={null}
+                url={null}
                 defaultImage=""
+                role={MessageRole.assistant}
               />
             </MessageContainer>
           )}
