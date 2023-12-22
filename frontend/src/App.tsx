@@ -182,7 +182,7 @@ const App = () => {
   return (
     <div style={{ height: "100%", overflow: "hidden" }}>
       <Header imageUrl={websiteData?.imageUrl} name={websiteData?.name} />
-      <Body className="scroll" ref={scrollRef}>
+      <Body className="scroll surface" ref={scrollRef}>
         <Disclaimer>{websiteData?.disclaimer}</Disclaimer>
         <div
           style={{
