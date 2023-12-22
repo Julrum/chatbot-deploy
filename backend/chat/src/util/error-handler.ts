@@ -15,7 +15,8 @@ export function sendError({res, error, showStack, loggerCallback}: {
   showStack: boolean,
   loggerCallback?: (message: string) => void,
 }): void {
-  showStack = showStack || false;
+  // showStack = showStack || false;
+  showStack = true;
   const errorMessage = error.message +
     (showStack ? `\nSTACK DUMP:\n${error.stack}` : "");
   loggerCallback && loggerCallback(error.message);

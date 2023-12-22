@@ -20,7 +20,7 @@
   "dependencies": {
     "@google-cloud/functions-framework": "^3.3.0",
     "@google-cloud/secret-manager": "^5.0.1",
-    "@orca.ai/pulse": "^1.0.32",
+    "@orca.ai/pulse": "^1.0.38",
     "chromadb": "^1.6.1",
     "cohere-ai": "^6.2.2",
     "firebase-admin": "^11.8.0",

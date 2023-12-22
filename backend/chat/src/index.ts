@@ -3,7 +3,7 @@ import * as admin from "firebase-admin";
 import * as cors from "cors";
 import * as express from "express";
 import * as functions from "firebase-functions/v2/https";
-import {ResourceName} from "@orca.ai/pulse";
+import {PingResponse, ResourceName} from "@orca.ai/pulse";
 import {
   getWebsite,
   postWebsite,
@@ -22,11 +22,21 @@ import {getMessage,
   deleteMessage,
   getReply,
 } from "./handlers/messages";
+import {config} from "./configs/config";
 
 admin.initializeApp();
 export const app = express();
 
 app.use(cors({origin: true}));
+app.use(express.urlencoded({extended: true}));
+app.use(express.json());
+
+app.get("/ping", (req, res) => {
+  res.status(200).send({
+    message: "pong",
+    timestamp: new Date().toISOString(),
+  } as PingResponse);
+});
 
 app.get(`/${ResourceName.Websites}/:websiteId`, getWebsite);
 app.post(`/${ResourceName.Websites}`, postWebsite);
@@ -45,5 +55,5 @@ app.delete(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessi
 
 app.get(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionId/${ResourceName.Messages}/:messageId/reply`, getReply);
 
-
+config.listen(app);
 export const chat = functions.onRequest(app);

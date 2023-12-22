@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteWebsite = exports.listWebsites = exports.postWebsite = exports.getWebsite = void 0;
-const websites_1 = require("../resources/websites");
+const websites_1 = require("../dao/websites");
 const https_1 = require("firebase-functions/v2/https");
 const v2_1 = require("firebase-functions/v2");
+const error_handler_1 = require("../util/error-handler");
 /**
  * Fill optional fields of a website
  * @param {Website} website
@@ -22,9 +23,14 @@ function fillWebsiteOptionalFields(website) {
     return website;
 }
 const getWebsite = async (req, res) => {
-    const websiteId = req.params.website_id;
+    const websiteId = req.params.websiteId;
+    if (!websiteId) {
+        res.status(400).send({ message: "Website ID is required" });
+        return;
+    }
+    const dao = new websites_1.WebsiteDAO();
     try {
-        const website = await websites_1.websiteCollection.get(websiteId);
+        const website = await dao.get(websiteId);
         const filledWebsite = fillWebsiteOptionalFields(website);
         res.status(200).send(filledWebsite);
     }
@@ -46,36 +52,75 @@ exports.getWebsite = getWebsite;
 const postWebsite = async (req, res) => {
     const website = req.body;
     if (!website.name) {
-        res.status(400).send("Website name is required");
+        res.status(400).send({
+            message: "Website name is required"
+        });
         return;
     }
     if (!website.url) {
-        res.status(400).send("Website URL is required");
+        res.status(400).send({
+            message: "Website URL is required"
+        });
         return;
     }
     if (!website.description) {
-        res.status(400).send("Website description is required");
+        res.status(400).send({
+            message: "Website description is required"
+        });
         return;
     }
     const filledWebsite = fillWebsiteOptionalFields(website);
-    const newWebsite = await websites_1.websiteCollection.add(filledWebsite);
-    res.status(200).send(newWebsite);
+    const dao = new websites_1.WebsiteDAO();
+    try {
+        const newWebsite = await dao.add(filledWebsite);
+        res.status(200).send(newWebsite);
+    }
+    catch (error) {
+        (0, error_handler_1.sendError)({
+            res,
+            error: error,
+            showStack: true,
+            loggerCallback: v2_1.logger.error,
+        });
+    }
 };
 exports.postWebsite = postWebsite;
 const listWebsites = async (req, res) => {
-    const fetchedWebsites = await websites_1.websiteCollection.list();
-    const websites = fetchedWebsites.map((website) => fillWebsiteOptionalFields(website));
-    res.status(200).send(websites);
+    const dao = new websites_1.WebsiteDAO();
+    try {
+        const fetchedWebsites = await dao.list();
+        const websites = fetchedWebsites.map((website) => fillWebsiteOptionalFields(website));
+        res.status(200).send(websites);
+    }
+    catch (error) {
+        (0, error_handler_1.sendError)({
+            res,
+            error: error,
+            showStack: true,
+            loggerCallback: v2_1.logger.error,
+        });
+    }
 };
 exports.listWebsites = listWebsites;
 const deleteWebsite = async (req, res) => {
-    const websiteId = req.params.website_id;
+    const websiteId = req.params.websiteId;
     if (!websiteId) {
-        res.status(400).send("Website ID is required");
+        res.status(400).send({ message: "Website ID is required" });
         return;
     }
-    await websites_1.websiteCollection.delete(websiteId);
-    res.status(200).send("Website deleted");
+    const dao = new websites_1.WebsiteDAO();
+    try {
+        await dao.delete(websiteId);
+        res.status(200).send({ message: "Website deleted" });
+    }
+    catch (error) {
+        (0, error_handler_1.sendError)({
+            res,
+            error: error,
+            showStack: true,
+            loggerCallback: v2_1.logger.error,
+        });
+    }
 };
 exports.deleteWebsite = deleteWebsite;
 //# sourceMappingURL=websites.js.map

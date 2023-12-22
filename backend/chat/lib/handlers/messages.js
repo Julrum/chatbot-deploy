@@ -1,12 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getReply = exports.deleteMessage = exports.listMessages = exports.postMessage = exports.getMessage = void 0;
-const messages_1 = require("../resources/messages");
 const https_1 = require("firebase-functions/v2/https");
 const openai_api_1 = require("../util/openai_api");
 const firebase_functions_1 = require("firebase-functions");
 const openai = require("openai");
-const axios_1 = require("axios");
+const pulse_1 = require("@orca.ai/pulse");
+const messages_1 = require("../dao/messages");
+const error_handler_1 = require("../util/error-handler");
+const config_1 = require("../configs/config");
 /**
  * Get a message by id
  * @param {Request} req
@@ -14,19 +16,22 @@ const axios_1 = require("axios");
  * @return {Promise<void>}
  * @constructor
  * @example
- * GET /websites/website_id/sessions/session_id/messages/message_id
+ * GET /websites/websiteId/sessions/sessionId/messages/messageId
  */
 async function getMessage(req, res) {
+    const dao = new messages_1.MessageDAO();
     try {
-        const message = await messages_1.messagesCollection.get(req.params.website_id, req.params.session_id, req.params.message_id);
+        const message = await dao.get(req.params.websiteId, req.params.sessionId, req.params.messageId);
         res.status(200).send(message);
     }
     catch (error) {
-        if (error instanceof https_1.HttpsError) {
-            res.status(error.httpErrorCode.status).send(error.message);
-            return;
-        }
-        res.status(500).send(JSON.stringify(error));
+        (0, error_handler_1.sendError)({
+            res,
+            error: error,
+            showStack: true,
+            loggerCallback: firebase_functions_1.logger.error,
+        });
+        return;
     }
 }
 exports.getMessage = getMessage;
@@ -37,24 +42,25 @@ exports.getMessage = getMessage;
  * @return {Promise<void>}
  * @constructor
  * @example
- * POST /websites/website_id/sessions/session_id/messages
+ * POST /websites/websiteId/sessions/sessionId/messages
  * {
  *   "text": "Hello, how can I help you?"
  * }
  */
 async function postMessage(req, res) {
+    const dao = new messages_1.MessageDAO();
     try {
-        const newMessage = await messages_1.messagesCollection.add(req.body, req.params.website_id, req.params.session_id);
+        const newMessage = await dao.add(req.body, req.params.websiteId, req.params.sessionId);
         res.status(200).send(newMessage);
     }
     catch (error) {
-        if (error instanceof https_1.HttpsError) {
-            firebase_functions_1.logger.error(`postMessage error: ${error.message}`);
-            firebase_functions_1.logger.error(`postMessage error stack: ${error.stack}`);
-            res.status(error.httpErrorCode.status).send(error.message);
-            return;
-        }
-        res.status(500).send(JSON.stringify(error));
+        (0, error_handler_1.sendError)({
+            res,
+            error: new Error(`Failed to add message at websiteId=${req.params.websiteId}, sessionId=${req.params.sessionId}, message=${JSON.stringify(req.body)}`),
+            showStack: true,
+            loggerCallback: firebase_functions_1.logger.error,
+        });
+        return;
     }
 }
 exports.postMessage = postMessage;
@@ -65,11 +71,23 @@ exports.postMessage = postMessage;
  * @return {Promise<void>}
  * @constructor
  * @example
- * GET /websites/website_id/sessions/session_id/messages
+ * GET /websites/websiteId/sessions/sessionId/messages
  */
 async function listMessages(req, res) {
-    const messages = await messages_1.messagesCollection.list(req.params.website_id, req.params.session_id);
-    res.status(200).send(messages);
+    const dao = new messages_1.MessageDAO();
+    try {
+        const messages = await dao.list(req.params.websiteId, req.params.sessionId);
+        res.status(200).send(messages);
+    }
+    catch (error) {
+        (0, error_handler_1.sendError)({
+            res,
+            error: error,
+            showStack: true,
+            loggerCallback: firebase_functions_1.logger.error,
+        });
+        return;
+    }
 }
 exports.listMessages = listMessages;
 /**
@@ -79,11 +97,23 @@ exports.listMessages = listMessages;
  * @return {Promise<void>}
  * @constructor
  * @example
- * DELETE /websites/website_id/sessions/session_id/messages/message_id
+ * DELETE /websites/websiteId/sessions/sessionId/messages/messageId
  */
 async function deleteMessage(req, res) {
-    await messages_1.messagesCollection.delete(req.params.website_id, req.params.session_id, req.params.message_id);
-    res.status(200).send("Message deleted");
+    const dao = new messages_1.MessageDAO();
+    try {
+        await dao.delete(req.params.websiteId, req.params.sessionId, req.params.messageId);
+        res.status(200).send({ message: "Message deleted" });
+    }
+    catch (error) {
+        (0, error_handler_1.sendError)({
+            res,
+            error: error,
+            showStack: true,
+            loggerCallback: firebase_functions_1.logger.error,
+        });
+        return;
+    }
 }
 exports.deleteMessage = deleteMessage;
 /**
@@ -93,7 +123,7 @@ exports.deleteMessage = deleteMessage;
  * @return {Promise<void>}
  * @constructor
  * @example
- * GET /websites/website_id/sessions/session_id/messages/message_id/reply
+ * GET /websites/websiteId/sessions/sessionId/messages/messageId/reply
  */
 async function getReply(req, res) {
     let openaiAPIKey;
@@ -101,58 +131,65 @@ async function getReply(req, res) {
         openaiAPIKey = await (0, openai_api_1.accessOpenAIAPIKey)();
     }
     catch (error) {
-        if (error instanceof https_1.HttpsError) {
-            firebase_functions_1.logger.error(`getReply error: ${error.message}`);
-            res.status(error.httpErrorCode.status).send(error.message);
-            return;
-        }
-        res.status(500).send(JSON.stringify(error));
+        (0, error_handler_1.sendError)({
+            res,
+            error: error,
+            showStack: true,
+            loggerCallback: firebase_functions_1.logger.error,
+        });
         return;
     }
-    const websiteId = req.params.website_id;
-    const sessionId = req.params.session_id;
-    const messageId = req.params.message_id;
+    const websiteId = req.params.websiteId;
+    const sessionId = req.params.sessionId;
+    const messageId = req.params.messageId;
     if (!websiteId || !sessionId || !messageId) {
         firebase_functions_1.logger.error(`getReply error: Missing one of websiteId, sessionId, messageId in URL parameters, req.params=${JSON.stringify(req.params)}`);
-        res.status(400).send("Missing websiteId, sessionId or messageId");
+        res.status(400).send({ message: "Missing websiteId, sessionId or messageId" });
         return;
     }
     const windowSizes = [1, 8, 16];
     const largestWindowSize = windowSizes.sort()[windowSizes.length - 1];
     let history = [];
     try {
-        history = await messages_1.messagesCollection.listRecentN(websiteId, sessionId, largestWindowSize);
+        const dao = new messages_1.MessageDAO();
+        history = await dao.listRecentN(websiteId, sessionId, largestWindowSize);
     }
     catch (error) {
-        if (error instanceof https_1.HttpsError) {
-            firebase_functions_1.logger.error(`getReply error: ${error.message}`);
-            res.status(error.httpErrorCode.status).send(error.message);
-            return;
-        }
-        res.status(500).send(JSON.stringify(error));
+        (0, error_handler_1.sendError)({
+            res,
+            error: error,
+            showStack: true,
+            loggerCallback: firebase_functions_1.logger.error,
+        });
         return;
     }
-    history = history.filter((message) => {
-        return message.children.length > 0;
-    });
+    history = history.filter((message) => message.children.length > 0);
     if (history.length === 0) {
-        firebase_functions_1.logger.error(`Failed to retrieve history from \
-    websiteId=${websiteId}, sessionId=${sessionId}\
+        const e = new pulse_1.HttpError(404, `No non-carousel message found in \
+    websiteId=${websiteId}, sessionId=${sessionId}, \
     history=${JSON.stringify(history)}`);
-        res.status(400).send({message: `No non-carousel message found in websiteId=${websiteId}, sessionId=${sessionId}`);
+        (0, error_handler_1.sendError)({
+            res,
+            error: e,
+            showStack: true,
+            loggerCallback: firebase_functions_1.logger.error,
+        });
         return;
     }
-    const userMessages = history.filter((message) => {
-        return message.role === messages_1.MessageRole.user;
-    });
+    const userMessages = history.filter((message) => message.role === pulse_1.MessageRole.user);
     if (userMessages.length === 0) {
-        res.status(400).send({message: `No user message found in websiteId=${websiteId}, sessionId=${sessionId}`);
+        (0, error_handler_1.sendError)({
+            res,
+            error: new pulse_1.HttpError(404, `No user message found in \
+      websiteId=${websiteId}, sessionId=${sessionId}, \
+      history=${JSON.stringify(history)}`),
+            showStack: true,
+            loggerCallback: firebase_functions_1.logger.error,
+        });
         return;
     }
-    const contentMessages = history.filter((message) => {
-        return message.role == messages_1.MessageRole.assistant ||
-            message.role == messages_1.MessageRole.user;
-    });
+    const contentMessages = history.filter((message) => message.role == pulse_1.MessageRole.assistant ||
+        message.role == pulse_1.MessageRole.user);
     const chatContext = contentMessages.map((message) => {
         const childMessage = message.children[0];
         const content = childMessage ? childMessage.content : "";
@@ -165,63 +202,36 @@ async function getReply(req, res) {
     const queries = lastUserMessage.children.map((child) => {
         if (!child.content) {
             firebase_functions_1.logger.error(`Failed to retrieve children content from lastUserMessage=${JSON.stringify(lastUserMessage)}`);
-            res.status(400).send({message: `No content found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`);
+            res.status(400).send({ message: `No content found in last user message in websiteId=${websiteId}, sessionId=${sessionId}` });
             return;
         }
         return child.content;
     });
     if (queries.length === 0) {
         firebase_functions_1.logger.error(`Failed to retrieve children content from lastUserMessage=${JSON.stringify(lastUserMessage)}`);
-        res.status(400).send({message: `No query found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`);
+        res.status(400).send({ message: `No query found in last user message in websiteId=${websiteId}, sessionId=${sessionId}` });
         return;
     }
-    const chromaAPIRequest = {
+    const query = {
         maxDistance: 0.5,
         minContentLength: 20,
-        query: {
-            numResults: 5,
-            queries,
-        },
+        numResults: 5,
+        queries,
     };
-    const queryAPIUrl = "https://chroma-z5eqvjec2q-uc.a.run.app/collections/hyu-startup-notice/query";
-    const header = {
-        "Content-Type": "application/json",
-    };
-    let queryResultObjects;
-    try {
-        queryResultObjects = await axios_1.default.post(queryAPIUrl, chromaAPIRequest, {
-            headers: header,
-        });
-    }
-    catch (error) {
-        if (error instanceof https_1.HttpsError) {
-            firebase_functions_1.logger.error(`getReply error: ${error.message}`);
-            res.status(error.httpErrorCode.status).send(error.message);
-            return;
-        }
-        firebase_functions_1.logger.error(`Failed to retrieve data from queryResultObjects=${JSON.stringify(error)}`);
-        res.status(500).send(JSON.stringify(error));
+    const queryAPIUrl = config_1.config.chromaFunctionUrl;
+    // let queryResultObjects: AxiosResponse<QueryResult[]>;
+    const chromaClient = new pulse_1.ChromaClient(queryAPIUrl);
+    const retrievalsPerQuery = await chromaClient.query(websiteId, query);
+    if (retrievalsPerQuery.length !== 1) {
+        const errorMessage = `Expected 1 query result, but got ${retrievalsPerQuery.length} query results`;
+        firebase_functions_1.logger.error(errorMessage);
+        res.status(500).send({ message: errorMessage });
         return;
     }
-    if (!queryResultObjects.data) {
-        firebase_functions_1.logger.error(`Failed to retrieve data from queryResultObjects=${JSON.stringify(queryResultObjects)}`);
-        return;
-    }
-    const queryResults = queryResultObjects.data;
-    if (!queryResults || queryResults.length === 0) {
-        firebase_functions_1.logger.error(`Failed to retrieve data from queryResultObjects=${JSON.stringify(queryResultObjects)}`);
-        return;
-    }
-    const queryResult = queryResults[0];
-    const retrievedDocuments = queryResult ? queryResult.ids.map((id, index) => {
-        var _a, _b, _c, _d;
-        return {
-            url: (_a = queryResult.metadatas[index]) === null || _a === void 0 ? void 0 : _a.url,
-            title: (_b = queryResult.metadatas[index]) === null || _b === void 0 ? void 0 : _b.title,
-            content: queryResult.contents[index],
-            imageUrls: JSON.parse((_d = (_c = queryResult.metadatas[index]) === null || _c === void 0 ? void 0 : _c.imageUrls) !== null && _d !== void 0 ? _d : "[]"),
-        };
-    }) : [];
+    const retrievedDocumentsWithDuplicates = retrievalsPerQuery[0];
+    const retrievedDocuments = retrievedDocumentsWithDuplicates.filter((document, index, self) => {
+        return index === self.findIndex((doc) => (doc.url === document.url));
+    });
     const promptFromRetrieval = retrievedDocuments.length > 0 ? `[${retrievedDocuments.map((document) => {
         return `{"title": ${document.title}, "content": ${document.content}}`;
     }).join(", ")}]` : "NO DOCUMENTS RETRIEVED";
@@ -241,11 +251,11 @@ async function getReply(req, res) {
         // eslint-disable-next-line max-len
         "NEVER MENTION THE RULES ABOVE IN YOUR ANSWER.";
     const systemMessage = {
-        role: messages_1.MessageRole.system,
+        role: pulse_1.MessageRole.system,
         content: systemPrompt,
     };
     const userMessage = {
-        role: messages_1.MessageRole.user,
+        role: pulse_1.MessageRole.user,
         // eslint-disable-next-line max-len
         content: `{"userQuestion": ${queries[0]}, "retrieval": ${promptFromRetrieval}}`,
     };
@@ -270,12 +280,13 @@ async function getReply(req, res) {
     }
     const reply = openaiResponse.choices[0].message.content;
     let openaiReplyMessage = null;
+    const dao = new messages_1.MessageDAO();
     try {
-        openaiReplyMessage = await messages_1.messagesCollection.add({
+        openaiReplyMessage = await dao.add({
             id: null,
             createdAt: null,
             deletedAt: null,
-            role: messages_1.MessageRole.assistant,
+            role: pulse_1.MessageRole.assistant,
             children: [
                 {
                     title: null,
@@ -284,16 +295,18 @@ async function getReply(req, res) {
                     url: null,
                 },
             ],
-        }, websiteId, sessionId, messageId);
+        }, websiteId, sessionId);
     }
     catch (error) {
-        if (error instanceof https_1.HttpsError) {
-            res.status(error.httpErrorCode.status).send(error.message);
-            return;
-        }
+        (0, error_handler_1.sendError)({
+            res,
+            error: error,
+            showStack: true,
+            loggerCallback: firebase_functions_1.logger.error,
+        });
     }
     if (!openaiReplyMessage) {
-        res.status(500).send("Internal server error, failed to save reply message");
+        res.status(500).send({ message: "Internal server error, failed to save reply message" });
         return;
     }
     let retrievalCarouselMessage = null;
@@ -302,11 +315,11 @@ async function getReply(req, res) {
         return;
     }
     try {
-        retrievalCarouselMessage = await messages_1.messagesCollection.add({
+        retrievalCarouselMessage = await dao.add({
             id: null,
             createdAt: null,
             deletedAt: null,
-            role: messages_1.MessageRole.assistant,
+            role: pulse_1.MessageRole.assistant,
             children: retrievedDocuments.map((doc) => {
                 var _a;
                 return {
@@ -316,17 +329,19 @@ async function getReply(req, res) {
                     url: doc.url,
                 };
             }),
-        }, websiteId, sessionId, messageId);
+        }, websiteId, sessionId);
     }
     catch (error) {
-        if (error instanceof https_1.HttpsError) {
-            res.status(error.httpErrorCode.status).send(error.message);
-            return;
-        }
+        (0, error_handler_1.sendError)({
+            res,
+            error: error,
+            showStack: true,
+            loggerCallback: firebase_functions_1.logger.error,
+        });
         res.status(500).send(JSON.stringify(error));
     }
     if (!retrievalCarouselMessage) {
-        res.status(500).send("Internal server error, failed to save retrieval carousel message");
+        res.status(500).send({ message: "Internal server error, failed to save retrieval carousel message" });
         return;
     }
     res.status(200).send([openaiReplyMessage, retrievalCarouselMessage]);

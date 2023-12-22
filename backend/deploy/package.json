@@ -6,6 +6,18 @@
   "scripts": {
     "build": "tsc",
     "run-local-chromadb": "docker run -p 8000:8000 chromadb/chroma",
+    "cli:chat:local": "npm run build && node lib/cli/chat.js http://localhost:8081",
+    "cli:chat:dev": "npm run build && node lib/cli/chat.js https://us-central1-chatbot-dev-406508.cloudfunctions.net/chat",
+    "cli:chat:prod": "npm run build && node lib/cli/chat.js https://us-central1-chatbot-32ff4.cloudfunctions.net/chat",
+    "test:chat:local": "npm run build && PHASE=local ./node_modules/.bin/jest --verbose lib/test/chat.test.js",
+    "test:chat:dev": "npm run build && PHASE=dev ./node_modules/.bin/jest --verbose lib/test/chat.test.js",
+    "test:chat:prod": "npm run build && PHASE=prod ./node_modules/.bin/jest --verbose lib/test/chat.test.js",
+    "build:chat:local": "npm run build && cd ../chat && npm run config:local && npm run build",
+    "build:chat:dev": "npm run build && cd ../chat && npm run config:dev && npm run build",
+    "build:chat:prod": "npm run build && cd ../chat && npm run config:prod && npm run build",
+    "deploy:chat:local": "npm run build:chat:local && cd ../chat && node lib/index.js",
+    "deploy:chat:dev": "npm run build:chat:dev && node lib/deploy/chat.js -p dev",
+    "deploy:chat:prod": "npm run build:chat:prod && node lib/deploy/chat.js -p prod",
     "cli:chroma:local": "npm run build && node lib/cli/chroma.js http://localhost:8081",
     "cli:chroma:dev": "npm run build && node lib/cli/chroma.js https://us-central1-chatbot-dev-406508.cloudfunctions.net/chroma",
     "cli:chroma:prod": "npm run build && node lib/cli/chroma.js https://us-central1-chatbot-32ff4.cloudfunctions.net/chroma",
@@ -44,7 +56,7 @@
     "@google-cloud/functions": "^3.0.1",
     "@google-cloud/iam": "^1.0.1",
     "@google-cloud/iam-credentials": "^3.0.1",
-    "@orca.ai/pulse": "^1.0.32",
+    "@orca.ai/pulse": "^1.0.38",
     "google-auth-library": "^9.4.1"
   }
 }

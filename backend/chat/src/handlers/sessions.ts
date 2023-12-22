@@ -2,6 +2,7 @@ import {Request, Response} from "express";
 import {sendError} from "../util/error-handler";
 import {logger} from "firebase-functions/v2";
 import {SessionDAO} from "../dao/sessions";
+import {StringMessage} from "@orca.ai/pulse";
 
 export const getSession = async (req: Request, res: Response) => {
   const websiteId = req.params.websiteId;
@@ -58,7 +59,9 @@ export const deleteSession = async (req: Request, res: Response) => {
   const dao = new SessionDAO();
   try {
     await dao.delete(websiteId, sessionId);
-    res.status(200).send();
+    res.status(200).send({
+      message: `Session ${sessionId} deleted`,
+    } as StringMessage);
   } catch (error) {
     sendError({
       res,

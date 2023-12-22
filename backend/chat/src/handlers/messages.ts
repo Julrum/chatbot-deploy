@@ -4,18 +4,19 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {accessOpenAIAPIKey} from "../util/openai_api";
 import {logger} from "firebase-functions";
 import * as openai from "openai";
-import axios, {AxiosResponse} from "axios";
 import {
   ChildMessage,
   HttpError,
   Message,
   MessageRole,
-  QueryResult,
-  RetrievedDocument,
   StringMessage,
+  Query,
+  OpenAIMessage,
+  ChromaClient,
 } from "@orca.ai/pulse";
 import {MessageDAO} from "../dao/messages";
 import {sendError} from "../util/error-handler";
+import {config} from "../configs/config";
 /**
  * Get a message by id
  * @param {Request} req
@@ -69,7 +70,7 @@ export async function postMessage(req: Request, res: Response): Promise<void> {
   } catch (error) {
     sendError({
       res,
-      error: error as Error,
+      error: new Error(`Failed to add message at websiteId=${req.params.websiteId}, sessionId=${req.params.sessionId}, message=${JSON.stringify(req.body)}`),
       showStack: true,
       loggerCallback: logger.error,
     });
@@ -232,53 +233,29 @@ export async function getReply(req: Request, res: Response): Promise<void> {
     res.status(400).send({message: `No query found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`} as StringMessage);
     return;
   }
-  const chromaAPIRequest = {
+  const query = {
     maxDistance: 0.5,
     minContentLength: 20,
     numResults: 5,
     queries,
   } as Query;
-  const queryAPIUrl = "https://chroma-z5eqvjec2q-uc.a.run.app/collections/hyu-startup-notice/query";
-  const header = {
-    "Content-Type": "application/json",
-  };
-  let queryResultObjects: AxiosResponse<QueryResult[]>;
-  try {
-    queryResultObjects = await axios.post(queryAPIUrl, chromaAPIRequest, {
-      headers: header,
-    });
-  } catch (error) {
-    if (error instanceof HttpsError) {
-      logger.error(`getReply error: ${error.message}`);
-      res.status(error.httpErrorCode.status).send(error.message);
-      return;
-    }
-    logger.error(`Failed to retrieve data from queryResultObjects=${JSON.stringify(error)}`);
-    res.status(500).send(JSON.stringify(error));
+  const queryAPIUrl = config.chromaFunctionUrl;
+  // let queryResultObjects: AxiosResponse<QueryResult[]>;
+  const chromaClient = new ChromaClient(queryAPIUrl);
+  const retrievalsPerQuery = await chromaClient.query(websiteId, query);
+  if (retrievalsPerQuery.length !== 1) {
+    const errorMessage = `Expected 1 query result, but got ${retrievalsPerQuery.length} query results`;
+    logger.error(errorMessage);
+    res.status(500).send({message: errorMessage} as StringMessage);
     return;
   }
-  if (!queryResultObjects.data) {
-    logger.error(`Failed to retrieve data from queryResultObjects=${JSON.stringify(queryResultObjects)}`);
-    return;
-  }
-  const queryResults = queryResultObjects.data as QueryResult[];
-  if (!queryResults || queryResults.length === 0) {
-    logger.error(`Failed to retrieve data from queryResultObjects=${JSON.stringify(queryResultObjects)}`);
-    return;
-  }
-  const queryResult = queryResults[0] ?? {} as QueryResult;
-  const ids = queryResult.ids ?? [];
-  const metadatas = queryResult.metadatas ?? [];
-  const contents = queryResult.contents ?? [];
-  const retrievedDocuments = ids.map((_, index) => {
-    return {
-      url: metadatas[index]?.url as string,
-      title: metadatas[index]?.title as string,
-      content: contents[index] as string,
-      imageUrls: JSON.parse(
-        metadatas[index]?.imageUrls as string ?? "[]") as string[],
-    } as RetrievedDocument;
+  const retrievedDocumentsWithDuplicates = retrievalsPerQuery[0];
+  const retrievedDocuments = retrievedDocumentsWithDuplicates.filter((document, index, self) => {
+    return index === self.findIndex((doc) => (
+      doc.url === document.url
+    ));
   });
+
   const promptFromRetrieval = retrievedDocuments.length > 0 ? `[${retrievedDocuments.map((document) => {
     return `{"title": ${document.title}, "content": ${document.content}}`;
   }).join(", ")}]` : "NO DOCUMENTS RETRIEVED";

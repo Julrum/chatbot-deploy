@@ -3,6 +3,8 @@ import {
   ResourceName, convertResourceDates,
 } from "@orca.ai/pulse";
 import {BaseChatDAO} from "./base";
+import {ChromaClient} from "@orca.ai/pulse";
+import {config} from "../configs/config";
 
 /**
  * Base class for all DAOs.
@@ -42,7 +44,30 @@ export class WebsiteDAO extends BaseChatDAO<Website> {
     const ref = this.client.collection(ResourceName.Websites).doc();
     website.id = ref.id;
     website.createdAt = new Date();
-    await ref.set(website);
+    const chromaClient = new ChromaClient(config.chromaFunctionUrl);
+    try {
+      await chromaClient.ping();
+      console.debug("Chroma function is available");
+    } catch (error) {
+      // eslint-disable-next-line max-len
+      throw new Error(`Chroma function at ${config.chromaFunctionUrl} is not available, error=${error}`);
+    }
+    try {
+      await chromaClient.createCollection(website.id);
+    } catch (error) {
+      // eslint-disable-next-line max-len
+      throw new Error(`Failed to create collection for website ${website.id}, details: ${error}`);
+    }
+    try {
+      await ref.set(website);
+    } catch (error) {
+      try {
+        await chromaClient.deleteCollection(website.id);
+      } catch (error) {
+        throw new Error(`Failed to clear collection for website ${website.id}`);
+      }
+      throw new Error(`Failed to create website ${website.id}`);
+    }
     return website;
   }
   /**

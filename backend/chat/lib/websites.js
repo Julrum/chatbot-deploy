@@ -18,7 +18,7 @@ const getWebsite = async (req, res) => {
     const websiteRef = db.collection("websites").doc(websiteId);
     const websiteDoc = await websiteRef.get();
     if (!websiteDoc.exists) {
-        res.status(404).send("Website not found");
+        res.status(404).send({message: "Website not found");
         return;
     }
     const website = websiteDoc.data();
@@ -28,15 +28,15 @@ exports.getWebsite = getWebsite;
 const postWebsite = async (req, res) => {
     const website = req.body;
     if (!website.name) {
-        res.status(400).send("Website name is required");
+        res.status(400).send({message: "Website name is required");
         return;
     }
     if (!website.url) {
-        res.status(400).send("Website URL is required");
+        res.status(400).send({message: "Website URL is required");
         return;
     }
     if (!website.description) {
-        res.status(400).send("Website description is required");
+        res.status(400).send({message: "Website description is required");
         return;
     }
     const db = admin.firestore();
@@ -58,7 +58,7 @@ exports.listWebsites = listWebsites;
 const deleteWebsite = async (req, res) => {
     const websiteId = req.params.website_id;
     if (!websiteId) {
-        res.status(400).send("Website ID is required");
+        res.status(400).send({message: "Website ID is required");
         return;
     }
     const db = admin.firestore();

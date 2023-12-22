@@ -74,7 +74,8 @@ export class MessageDAO extends BaseChatDAO<Message> {
       .doc();
     message.id = ref.id;
     message.createdAt = new Date();
-    return await ref.set(message).then(() => message);
+    await ref.set(message).then(() => message);
+    return message;
   }
   /**
    * Delete a message from a session.
