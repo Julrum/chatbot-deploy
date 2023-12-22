@@ -2,11 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 exports.config = {
-    chromaHost: "http://localhost:8000",
-    listen: (app) => {
-        app.listen(8081, () => {
-            console.log("Server listening on port 8081");
-        });
-    },
+    chromaHost: "http://10.128.0.4:8000",
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    listen: (app) => { },
 };
 //# sourceMappingURL=config.js.map

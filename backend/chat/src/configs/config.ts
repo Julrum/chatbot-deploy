@@ -1,10 +1,6 @@
 import {Express} from "express";
 export const config = {
-  chromaFunctionUrl: "http://localhost:8081",
+  chromaFunctionUrl: "https://us-central1-chatbot-32ff4.cloudfunctions.net/chroma",
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  listen: (app: Express) => {
-    app.listen(8080, () => {
-      console.log("Chat API server is listening on port 8080");
-    });
-  },
+  listen: (app: Express) => {},
 };

@@ -88,7 +88,7 @@ describe('Chat REST API Test', () => {
     });
     await chatClient.deleteSession(website.id!, session.id!);
     await chatClient.deleteWebsite(website.id!);
-  });
+  }, 1 * 60 * 1000);
   it("Query test", async () => {
     const website = await chatClient.addWebsite({
       id: null,

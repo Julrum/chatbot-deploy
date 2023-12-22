@@ -157,6 +157,8 @@ export async function deploy(argv: Arguments) : Promise<void> {
     "--trigger-http",
     "--allow-unauthenticated",
     "--gen2",
+    "--concurrency",
+    "1",
     "--set-build-env-vars=NPM_TOKEN=$(gcloud secrets versions access latest --secret=\"orca-npm-token\" --format=\"get(payload.data)\" | base64 --decode)",
     "--set-env-vars=NPM_TOKEN=$(gcloud secrets versions access latest --secret=\"orca-npm-token\" --format=\"get(payload.data)\" | base64 --decode)",
   ];
