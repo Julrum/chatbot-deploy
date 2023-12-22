@@ -1,45 +1,70 @@
 import {Request, Response} from "express";
-import {sessionCollection} from "../resources/sessions";
-import {HttpsError} from "firebase-functions/v2/https";
+import {sendError} from "../util/error-handler";
+import {logger} from "firebase-functions/v2";
+import {SessionDAO} from "../dao/sessions";
 
 export const getSession = async (req: Request, res: Response) => {
-  const websiteId = req.params.website_id;
-  const sessionId = req.params.session_id;
+  const websiteId = req.params.websiteId;
+  const sessionId = req.params.sessionId;
+  const dao = new SessionDAO();
   try {
-    const session = await sessionCollection.get(websiteId, sessionId);
+    const session = await dao.get(websiteId, sessionId);
     res.status(200).send(session);
   } catch (error) {
-    if (error instanceof HttpsError) {
-      res.status(error.httpErrorCode.status).send(error.message);
-      return;
-    }
-    res.status(500).send(JSON.stringify(error));
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
   }
 };
 
 export const postSession = async (req: Request, res: Response) => {
-  const websiteId = req.params.website_id;
+  const websiteId = req.params.websiteId;
+  const dao = new SessionDAO();
   try {
-    const newSession = await sessionCollection.add(req.body, websiteId);
+    const newSession = await dao.add(req.body, websiteId);
     res.status(200).send(newSession);
   } catch (error) {
-    if (error instanceof HttpsError) {
-      res.status(error.httpErrorCode.status).send(error.message);
-      return;
-    }
-    res.status(500).send(JSON.stringify(error));
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
   }
 };
 
 export const listSessions = async (req: Request, res: Response) => {
-  const websiteId = req.params.website_id;
-  const sessions = await sessionCollection.list(websiteId);
-  res.status(200).send(sessions);
+  const websiteId = req.params.websiteId;
+  const dao = new SessionDAO();
+  try {
+    const sessions = await dao.list(websiteId);
+    res.status(200).send(sessions);
+  } catch (error) {
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
+  }
 };
 
 export const deleteSession = async (req: Request, res: Response) => {
-  const websiteId = req.params.website_id;
-  const sessionId = req.params.session_id;
-  await sessionCollection.delete(websiteId, sessionId);
-  res.status(200).send();
+  const websiteId = req.params.websiteId;
+  const sessionId = req.params.sessionId;
+  const dao = new SessionDAO();
+  try {
+    await dao.delete(websiteId, sessionId);
+    res.status(200).send();
+  } catch (error) {
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
+  }
 };

@@ -250,17 +250,21 @@ app.post("/collections/:collectionId/query", async (req, res) => {
         });
         return;
     }
-    const maxDistance = req.body.maxDistance;
+    const maxDistance = query.maxDistance;
     if (!maxDistance) {
         res.status(400).send({
             message: "maxDistance not provided.",
         });
         return;
     }
-    const minContentLength = req.body.minContentLength;
+    const minContentLength = query.minContentLength;
     if (!minContentLength) {
+        // eslint-disable-next-line max-len
+        console.debug(`minContentLength not provided, query dump: ${JSON.stringify(query)}`);
+        console.debug(`minContentLength was ${minContentLength}`);
         res.status(400).send({
-            message: "minContentLength not provided.",
+            // eslint-disable-next-line max-len
+            message: "minContentLength not provided, query dump: " + JSON.stringify(query),
         });
         return;
     }

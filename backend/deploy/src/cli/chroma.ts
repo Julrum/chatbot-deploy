@@ -1,4 +1,4 @@
-import {ChromaClient, Collection, Document} from "@orca.ai/pulse";
+import {ChromaClient, Collection, Document, Query, RetrievedDocument} from "@orca.ai/pulse";
 import {question} from "./common";
 
 interface ChromaURI {
@@ -176,6 +176,33 @@ async function main() {
         } else {
           console.log("Please specify URI like: <collection>/<document> or <collection>");
           continue;
+        }
+        break;
+      case "query":
+        if (!uri.collection) {
+          console.log("Please specify URI like: <collection>");
+          continue;
+        }
+        const collection = await client.getCollection(uri.collection);
+        const query = argv[2];
+        if (!query) {
+          console.log("Please specify query");
+          continue;
+        }
+        const retrievals = await client.query(collection.name, {
+          maxDistance: 0.5,
+          numResults: 5,
+          minContentLength: 1,
+          queries: [query],
+        } as Query);
+        console.log(`Found ${retrievals.length} results:`);
+        for (const retrievalPerQuery of retrievals) {
+          retrievalPerQuery.forEach((r: RetrievedDocument, i: number) => {
+            console.log(`[#${i}]`);
+            console.log(`\tTITLE: ${r.title} CONTENT: ${r.content}`);
+            console.log(`\turl: ${r.url}`);
+            console.log(`\timage URLs: ${r.imageUrls}`);
+          });
         }
         break;
       default:

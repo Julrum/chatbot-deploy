@@ -1,11 +1,21 @@
 /* eslint-disable max-len */
 import {Request, Response} from "express";
-import {messagesCollection, Message, MessageRole, ChildMessage} from "../resources/messages";
 import {HttpsError} from "firebase-functions/v2/https";
 import {accessOpenAIAPIKey} from "../util/openai_api";
 import {logger} from "firebase-functions";
 import * as openai from "openai";
 import axios, {AxiosResponse} from "axios";
+import {
+  ChildMessage,
+  HttpError,
+  Message,
+  MessageRole,
+  QueryResult,
+  RetrievedDocument,
+  StringMessage,
+} from "@orca.ai/pulse";
+import {MessageDAO} from "../dao/messages";
+import {sendError} from "../util/error-handler";
 /**
  * Get a message by id
  * @param {Request} req
@@ -13,22 +23,25 @@ import axios, {AxiosResponse} from "axios";
  * @return {Promise<void>}
  * @constructor
  * @example
- * GET /websites/website_id/sessions/session_id/messages/message_id
+ * GET /websites/websiteId/sessions/sessionId/messages/messageId
  */
 export async function getMessage(req: Request, res: Response): Promise<void> {
+  const dao = new MessageDAO();
   try {
-    const message = await messagesCollection.get(
-      req.params.website_id,
-      req.params.session_id,
-      req.params.message_id
+    const message = await dao.get(
+      req.params.websiteId,
+      req.params.sessionId,
+      req.params.messageId
     );
     res.status(200).send(message);
   } catch (error) {
-    if (error instanceof HttpsError) {
-      res.status(error.httpErrorCode.status).send(error.message);
-      return;
-    }
-    res.status(500).send(JSON.stringify(error));
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
+    return;
   }
 }
 
@@ -39,27 +52,28 @@ export async function getMessage(req: Request, res: Response): Promise<void> {
  * @return {Promise<void>}
  * @constructor
  * @example
- * POST /websites/website_id/sessions/session_id/messages
+ * POST /websites/websiteId/sessions/sessionId/messages
  * {
  *   "text": "Hello, how can I help you?"
  * }
  */
 export async function postMessage(req: Request, res: Response): Promise<void> {
+  const dao = new MessageDAO();
   try {
-    const newMessage = await messagesCollection.add(
+    const newMessage = await dao.add(
       req.body,
-      req.params.website_id,
-      req.params.session_id
+      req.params.websiteId,
+      req.params.sessionId
     );
     res.status(200).send(newMessage);
   } catch (error) {
-    if (error instanceof HttpsError) {
-      logger.error(`postMessage error: ${error.message}`);
-      logger.error(`postMessage error stack: ${error.stack}`);
-      res.status(error.httpErrorCode.status).send(error.message);
-      return;
-    }
-    res.status(500).send(JSON.stringify(error));
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
+    return;
   }
 }
 
@@ -70,14 +84,25 @@ export async function postMessage(req: Request, res: Response): Promise<void> {
  * @return {Promise<void>}
  * @constructor
  * @example
- * GET /websites/website_id/sessions/session_id/messages
+ * GET /websites/websiteId/sessions/sessionId/messages
  */
 export async function listMessages(req: Request, res: Response): Promise<void> {
-  const messages = await messagesCollection.list(
-    req.params.website_id,
-    req.params.session_id
-  );
-  res.status(200).send(messages);
+  const dao = new MessageDAO();
+  try {
+    const messages = await dao.list(
+      req.params.websiteId,
+      req.params.sessionId
+    );
+    res.status(200).send(messages);
+  } catch (error) {
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
+    return;
+  }
 }
 
 /**
@@ -87,45 +112,27 @@ export async function listMessages(req: Request, res: Response): Promise<void> {
  * @return {Promise<void>}
  * @constructor
  * @example
- * DELETE /websites/website_id/sessions/session_id/messages/message_id
+ * DELETE /websites/websiteId/sessions/sessionId/messages/messageId
  */
 export async function deleteMessage(
   req: Request, res: Response): Promise<void> {
-  await messagesCollection.delete(
-    req.params.website_id,
-    req.params.session_id,
-    req.params.message_id
-  );
-  res.status(200).send("Message deleted");
-}
-
-interface OpenAIMessage {
-  role: MessageRole;
-  content: string;
-}
-
-type Metadata = Record<string, string | number | boolean>;
-interface Document {
-  title: string;
-  content: string;
-  url: string;
-  imageUrls: string[];
-}
-
-interface QueryResult {
-  ids: string[];
-  metadatas: (Metadata | null)[];
-  contents: (string | null)[];
-  distances: (number | null)[];
-}
-
-interface ChromaAPIRequest {
-  maxDistance: number;
-  minContentLength: number;
-  query: {
-    numResults: number;
-    queries: string[];
-  };
+  const dao = new MessageDAO();
+  try {
+    await dao.delete(
+      req.params.websiteId,
+      req.params.sessionId,
+      req.params.messageId
+    );
+    res.status(200).send({message: "Message deleted"} as StringMessage);
+  } catch (error) {
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
+    return;
+  }
 }
 
 /**
@@ -135,66 +142,73 @@ interface ChromaAPIRequest {
  * @return {Promise<void>}
  * @constructor
  * @example
- * GET /websites/website_id/sessions/session_id/messages/message_id/reply
+ * GET /websites/websiteId/sessions/sessionId/messages/messageId/reply
  */
 export async function getReply(req: Request, res: Response): Promise<void> {
   let openaiAPIKey: string;
   try {
     openaiAPIKey = await accessOpenAIAPIKey();
   } catch (error) {
-    if (error instanceof HttpsError) {
-      logger.error(`getReply error: ${error.message}`);
-      res.status(error.httpErrorCode.status).send(error.message);
-      return;
-    }
-    res.status(500).send(JSON.stringify(error));
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
     return;
   }
 
-  const websiteId = req.params.website_id;
-  const sessionId = req.params.session_id;
-  const messageId = req.params.message_id;
+  const websiteId = req.params.websiteId;
+  const sessionId = req.params.sessionId;
+  const messageId = req.params.messageId;
   if (!websiteId || !sessionId || !messageId) {
     logger.error(`getReply error: Missing one of websiteId, sessionId, messageId in URL parameters, req.params=${JSON.stringify(req.params)}`);
-    res.status(400).send("Missing websiteId, sessionId or messageId");
+    res.status(400).send({message: "Missing websiteId, sessionId or messageId"} as StringMessage);
     return;
   }
   const windowSizes = [1, 8, 16];
   const largestWindowSize = windowSizes.sort()[windowSizes.length - 1];
   let history: Message[] = [];
   try {
-    history = await messagesCollection.listRecentN(
-      websiteId, sessionId, largestWindowSize);
+    const dao = new MessageDAO();
+    history = await dao.listRecentN(websiteId, sessionId, largestWindowSize);
   } catch (error) {
-    if (error instanceof HttpsError) {
-      logger.error(`getReply error: ${error.message}`);
-      res.status(error.httpErrorCode.status).send(error.message);
-      return;
-    }
-    res.status(500).send(JSON.stringify(error));
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
     return;
   }
-  history = history.filter((message) => {
-    return message.children.length > 0;
-  });
+  history = history.filter((message) => message.children.length > 0);
   if (history.length === 0) {
-    logger.error(`Failed to retrieve history from \
-    websiteId=${websiteId}, sessionId=${sessionId}\
+    const e = new HttpError(404, `No non-carousel message found in \
+    websiteId=${websiteId}, sessionId=${sessionId}, \
     history=${JSON.stringify(history)}`);
-    res.status(400).send(`No non-carousel message found in websiteId=${websiteId}, sessionId=${sessionId}`);
+    sendError({
+      res,
+      error: e,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
     return;
   }
-  const userMessages = history.filter((message) => {
-    return message.role === MessageRole.user;
-  });
+  const userMessages = history.filter((message) => message.role === MessageRole.user);
   if (userMessages.length === 0) {
-    res.status(400).send(`No user message found in websiteId=${websiteId}, sessionId=${sessionId}`);
+    sendError({
+      res,
+      error: new HttpError(404, `No user message found in \
+      websiteId=${websiteId}, sessionId=${sessionId}, \
+      history=${JSON.stringify(history)}`),
+      showStack: true,
+      loggerCallback: logger.error,
+    });
     return;
   }
-  const contentMessages = history.filter((message) => {
-    return message.role == MessageRole.assistant ||
-      message.role == MessageRole.user;
-  });
+  const contentMessages = history.filter((message) =>
+    message.role == MessageRole.assistant ||
+    message.role == MessageRole.user);
   const chatContext = contentMessages.map((message) => {
     const childMessage = message.children[0];
     const content = childMessage ? childMessage.content : "";
@@ -208,24 +222,22 @@ export async function getReply(req: Request, res: Response): Promise<void> {
   const queries = lastUserMessage.children.map((child) => {
     if (!child.content) {
       logger.error(`Failed to retrieve children content from lastUserMessage=${JSON.stringify(lastUserMessage)}`);
-      res.status(400).send(`No content found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`);
+      res.status(400).send({message: `No content found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`} as StringMessage);
       return;
     }
     return child.content;
   });
   if (queries.length === 0) {
     logger.error(`Failed to retrieve children content from lastUserMessage=${JSON.stringify(lastUserMessage)}`);
-    res.status(400).send(`No query found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`);
+    res.status(400).send({message: `No query found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`} as StringMessage);
     return;
   }
   const chromaAPIRequest = {
     maxDistance: 0.5,
     minContentLength: 20,
-    query: {
-      numResults: 5,
-      queries,
-    },
-  } as ChromaAPIRequest;
+    numResults: 5,
+    queries,
+  } as Query;
   const queryAPIUrl = "https://chroma-z5eqvjec2q-uc.a.run.app/collections/hyu-startup-notice/query";
   const header = {
     "Content-Type": "application/json",
@@ -254,16 +266,19 @@ export async function getReply(req: Request, res: Response): Promise<void> {
     logger.error(`Failed to retrieve data from queryResultObjects=${JSON.stringify(queryResultObjects)}`);
     return;
   }
-  const queryResult = queryResults[0];
-  const retrievedDocuments = queryResult ? queryResult.ids.map((id, index) => {
+  const queryResult = queryResults[0] ?? {} as QueryResult;
+  const ids = queryResult.ids ?? [];
+  const metadatas = queryResult.metadatas ?? [];
+  const contents = queryResult.contents ?? [];
+  const retrievedDocuments = ids.map((_, index) => {
     return {
-      url: queryResult.metadatas[index]?.url as string,
-      title: queryResult.metadatas[index]?.title as string,
-      content: queryResult.contents[index] as string,
+      url: metadatas[index]?.url as string,
+      title: metadatas[index]?.title as string,
+      content: contents[index] as string,
       imageUrls: JSON.parse(
-        queryResult.metadatas[index]?.imageUrls as string ?? "[]") as string[],
-    } as Document;
-  }) : [];
+        metadatas[index]?.imageUrls as string ?? "[]") as string[],
+    } as RetrievedDocument;
+  });
   const promptFromRetrieval = retrievedDocuments.length > 0 ? `[${retrievedDocuments.map((document) => {
     return `{"title": ${document.title}, "content": ${document.content}}`;
   }).join(", ")}]` : "NO DOCUMENTS RETRIEVED";
@@ -311,8 +326,9 @@ export async function getReply(req: Request, res: Response): Promise<void> {
   }
   const reply = openaiResponse.choices[0].message.content;
   let openaiReplyMessage: Message | null = null;
+  const dao = new MessageDAO();
   try {
-    openaiReplyMessage = await messagesCollection.add({
+    openaiReplyMessage = await dao.add({
       id: null,
       createdAt: null,
       deletedAt: null,
@@ -325,15 +341,17 @@ export async function getReply(req: Request, res: Response): Promise<void> {
         url: null,
       } as ChildMessage,
       ],
-    }, websiteId, sessionId, messageId);
+    } as Message, websiteId, sessionId);
   } catch (error) {
-    if (error instanceof HttpsError) {
-      res.status(error.httpErrorCode.status).send(error.message);
-      return;
-    }
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
   }
   if (!openaiReplyMessage) {
-    res.status(500).send("Internal server error, failed to save reply message");
+    res.status(500).send({message: "Internal server error, failed to save reply message"} as StringMessage);
     return;
   }
   let retrievalCarouselMessage: Message | null = null;
@@ -342,7 +360,7 @@ export async function getReply(req: Request, res: Response): Promise<void> {
     return;
   }
   try {
-    retrievalCarouselMessage = await messagesCollection.add({
+    retrievalCarouselMessage = await dao.add({
       id: null,
       createdAt: null,
       deletedAt: null,
@@ -355,16 +373,18 @@ export async function getReply(req: Request, res: Response): Promise<void> {
           url: doc.url,
         } as ChildMessage;
       }),
-    }, websiteId, sessionId, messageId);
+    }, websiteId, sessionId);
   } catch (error) {
-    if (error instanceof HttpsError) {
-      res.status(error.httpErrorCode.status).send(error.message);
-      return;
-    }
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
     res.status(500).send(JSON.stringify(error));
   }
   if (!retrievalCarouselMessage) {
-    res.status(500).send("Internal server error, failed to save retrieval carousel message");
+    res.status(500).send({message: "Internal server error, failed to save retrieval carousel message"} as StringMessage);
     return;
   }
   res.status(200).send([openaiReplyMessage, retrievalCarouselMessage]);

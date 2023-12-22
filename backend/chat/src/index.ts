@@ -3,7 +3,7 @@ import * as admin from "firebase-admin";
 import * as cors from "cors";
 import * as express from "express";
 import * as functions from "firebase-functions/v2/https";
-import {ResourceName} from "./resources/resource";
+import {ResourceName} from "@orca.ai/pulse";
 import {
   getWebsite,
   postWebsite,
@@ -28,22 +28,22 @@ export const app = express();
 
 app.use(cors({origin: true}));
 
-app.get(`/${ResourceName.Websites}/:website_id`, getWebsite);
+app.get(`/${ResourceName.Websites}/:websiteId`, getWebsite);
 app.post(`/${ResourceName.Websites}`, postWebsite);
 app.get(`/${ResourceName.Websites}`, listWebsites);
-app.delete(`/${ResourceName.Websites}/:website_id`, deleteWebsite);
+app.delete(`/${ResourceName.Websites}/:websiteId`, deleteWebsite);
 
-app.get(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}/:session_id`, getSession);
-app.post(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}`, postSession);
-app.get(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}`, listSessions);
-app.delete(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}/:session_id`, deleteSession);
+app.get(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionId`, getSession);
+app.post(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}`, postSession);
+app.get(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}`, listSessions);
+app.delete(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionId`, deleteSession);
 
-app.get(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}/:session_id/${ResourceName.Messages}/:message_id`, getMessage);
-app.post(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}/:session_id/${ResourceName.Messages}/`, postMessage);
-app.get(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}/:session_id/${ResourceName.Messages}`, listMessages);
-app.delete(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}/:session_id/${ResourceName.Messages}/:message_id`, deleteMessage);
+app.get(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionId/${ResourceName.Messages}/:messageId`, getMessage);
+app.post(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionId/${ResourceName.Messages}/`, postMessage);
+app.get(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionId/${ResourceName.Messages}`, listMessages);
+app.delete(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionId/${ResourceName.Messages}/:messageId`, deleteMessage);
 
-app.get(`/${ResourceName.Websites}/:website_id/${ResourceName.Sessions}/:session_id/${ResourceName.Messages}/:message_id/reply`, getReply);
+app.get(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionId/${ResourceName.Messages}/:messageId/reply`, getReply);
 
 
 export const chat = functions.onRequest(app);

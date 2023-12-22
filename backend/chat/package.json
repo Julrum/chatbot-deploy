@@ -17,6 +17,7 @@
   "main": "lib/index.js",
   "dependencies": {
     "@google-cloud/secret-manager": "^5.0.1",
+    "@orca.ai/pulse": "^1.0.32",
     "axios": "^1.6.2",
     "cors": "^2.8.5",
     "firebase-admin": "^11.8.0",

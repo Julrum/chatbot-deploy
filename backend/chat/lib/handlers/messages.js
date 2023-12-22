@@ -139,14 +139,14 @@ async function getReply(req, res) {
         firebase_functions_1.logger.error(`Failed to retrieve history from \
     websiteId=${websiteId}, sessionId=${sessionId}\
     history=${JSON.stringify(history)}`);
-        res.status(400).send(`No non-carousel message found in websiteId=${websiteId}, sessionId=${sessionId}`);
+        res.status(400).send({message: `No non-carousel message found in websiteId=${websiteId}, sessionId=${sessionId}`);
         return;
     }
     const userMessages = history.filter((message) => {
         return message.role === messages_1.MessageRole.user;
     });
     if (userMessages.length === 0) {
-        res.status(400).send(`No user message found in websiteId=${websiteId}, sessionId=${sessionId}`);
+        res.status(400).send({message: `No user message found in websiteId=${websiteId}, sessionId=${sessionId}`);
         return;
     }
     const contentMessages = history.filter((message) => {
@@ -165,14 +165,14 @@ async function getReply(req, res) {
     const queries = lastUserMessage.children.map((child) => {
         if (!child.content) {
             firebase_functions_1.logger.error(`Failed to retrieve children content from lastUserMessage=${JSON.stringify(lastUserMessage)}`);
-            res.status(400).send(`No content found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`);
+            res.status(400).send({message: `No content found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`);
             return;
         }
         return child.content;
     });
     if (queries.length === 0) {
         firebase_functions_1.logger.error(`Failed to retrieve children content from lastUserMessage=${JSON.stringify(lastUserMessage)}`);
-        res.status(400).send(`No query found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`);
+        res.status(400).send({message: `No query found in last user message in websiteId=${websiteId}, sessionId=${sessionId}`);
         return;
     }
     const chromaAPIRequest = {

@@ -1,7 +1,9 @@
 import {Request, Response} from "express";
-import {websiteCollection, Website} from "../resources/websites";
+import {WebsiteDAO} from "../dao/websites";
+import {StringMessage, Website} from "@orca.ai/pulse";
 import {HttpsError} from "firebase-functions/v2/https";
 import {logger} from "firebase-functions/v2";
+import {sendError} from "../util/error-handler";
 /**
  * Fill optional fields of a website
  * @param {Website} website
@@ -20,9 +22,14 @@ function fillWebsiteOptionalFields(website: Website) : Website {
 }
 
 export const getWebsite = async (req: Request, res: Response) => {
-  const websiteId = req.params.website_id;
+  const websiteId = req.params.websiteId;
+  if (!websiteId) {
+    res.status(400).send({message: "Website ID is required"} as StringMessage);
+    return;
+  }
+  const dao = new WebsiteDAO();
   try {
-    const website = await websiteCollection.get(websiteId);
+    const website = await dao.get(websiteId);
     const filledWebsite = fillWebsiteOptionalFields(website);
     res.status(200).send(filledWebsite);
   } catch (error) {
@@ -42,35 +49,68 @@ export const getWebsite = async (req: Request, res: Response) => {
 export const postWebsite = async (req: Request, res: Response) => {
   const website: Website = req.body;
   if (!website.name) {
-    res.status(400).send("Website name is required");
+    res.status(400).send({
+      message: "Website name is required"} as StringMessage);
     return;
   }
   if (!website.url) {
-    res.status(400).send("Website URL is required");
+    res.status(400).send({
+      message: "Website URL is required"} as StringMessage);
     return;
   }
   if (!website.description) {
-    res.status(400).send("Website description is required");
+    res.status(400).send({
+      message: "Website description is required"} as StringMessage);
     return;
   }
   const filledWebsite = fillWebsiteOptionalFields(website);
-  const newWebsite = await websiteCollection.add(filledWebsite);
-  res.status(200).send(newWebsite);
+  const dao = new WebsiteDAO();
+  try {
+    const newWebsite = await dao.add(filledWebsite);
+    res.status(200).send(newWebsite);
+  } catch (error) {
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
+  }
 };
 
 export const listWebsites = async (req: Request, res: Response) => {
-  const fetchedWebsites = await websiteCollection.list();
-  const websites = fetchedWebsites.map(
-    (website) => fillWebsiteOptionalFields(website));
-  res.status(200).send(websites);
+  const dao = new WebsiteDAO();
+  try {
+    const fetchedWebsites = await dao.list();
+    const websites = fetchedWebsites.map(
+      (website) => fillWebsiteOptionalFields(website));
+    res.status(200).send(websites);
+  } catch (error) {
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
+  }
 };
 
 export const deleteWebsite = async (req: Request, res: Response) => {
-  const websiteId = req.params.website_id;
+  const websiteId = req.params.websiteId;
   if (!websiteId) {
-    res.status(400).send("Website ID is required");
+    res.status(400).send({message: "Website ID is required"} as StringMessage);
     return;
   }
-  await websiteCollection.delete(websiteId);
-  res.status(200).send("Website deleted");
+  const dao = new WebsiteDAO();
+  try {
+    await dao.delete(websiteId);
+    res.status(200).send({message: "Website deleted"} as StringMessage);
+  } catch (error) {
+    sendError({
+      res,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
+  }
 };
