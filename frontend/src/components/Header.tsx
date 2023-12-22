@@ -1,4 +1,12 @@
-const Header = ({ imageUrl, name }: { imageUrl?: string; name?: string }) => (
+const Header = ({
+  imageUrl,
+  name,
+  setClose,
+}: {
+  imageUrl?: string;
+  name?: string;
+  setClose: () => void;
+}) => (
   <header className="surface fixed">
     <nav>
       {imageUrl && <img alt="logo" className="round medium" src={imageUrl} />}
@@ -8,9 +16,7 @@ const Header = ({ imageUrl, name }: { imageUrl?: string; name?: string }) => (
       <button
         aria-label="close"
         className="circle transparent"
-        onClick={() => {
-          window.parent.postMessage("close", "*");
-        }}
+        onClick={setClose}
       >
         <i>close</i>
       </button>

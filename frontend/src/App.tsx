@@ -1,78 +1,97 @@
-import { useEffect, useRef, useState } from "react";
-import Skeleton from "react-loading-skeleton";
-import Carousel from "react-slick";
-import styled from "styled-components";
+import { useEffect, useState } from "react";
+import styled, { css } from "styled-components";
 
-import { getMessages, getReply, sendMessage } from "./api/message";
+import { getMessages } from "./api/message";
 import { createSession, getSession } from "./api/session";
 import { getWebsiteData } from "./api/website";
-import ChatBubble from "./components/ChatBubble";
-import Disclaimer from "./components/Disclaimer";
-import Footer from "./components/Footer";
-import Header from "./components/Header";
-import Timestamp from "./components/Timestamp";
+import Chatbot from "./components/Chatbot";
 import type { MessageProps } from "./types/message";
 import type { WebsiteProps } from "./types/website";
 
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import "react-loading-skeleton/dist/skeleton.css";
+const Fab = styled.button<{ $open: boolean }>`
+  border-radius: 10px;
+  border: none;
+  bottom: 3%;
+  box-shadow: 0px 2px 5px 1px rgba(0, 0, 0, 0.151);
+  cursor: pointer;
+  height: 80px !important;
+  position: fixed;
+  right: 3%;
+  width: 80px !important;
+  z-index: 10;
 
-const FooterSpacer = styled.div`
-  height: 80px;
-  width: 100%;
-`;
+  @media (max-width: 768px) {
+    height: 60px;
+    width: 60px;
+  }
 
-const Body = styled.main`
-  -ms-overflow-style: none;
-  height: calc(var(--app-height) - 64px);
-  scrollbar-width: none;
+  ${({ $open }) =>
+    $open === true
+      ? css`
+          opacity: 0;
+          pointer-events: none;
+          transform: translateY(100%);
+          transition: transform 300ms cubic-bezier(0.85, 0, 0.6, 1) 0s,
+            opacity 150ms linear 0s;
+        `
+      : css`
+          opacity: 1;
+          pointer-events: auto;
+          transform: translateY(0%);
+          transition: transform 300ms cubic-bezier(0, 0.95, 0.1, 1) 0s,
+            opacity 150ms linear 0s;
+        `}
 
-  &::-webkit-scrollbar {
-    display: none;
+  i {
+    ---size: 3rem;
   }
 `;
 
-const MessageContainer = styled.div`
-  display: flex;
-  margin-top: 8px;
-  padding: 0 16px;
-  width: 100%;
-  /* 
-  @keyframes slideUp {
-    from {
-      transform: translateY(100vh);
-    }
-    to {
-      transform: translateY(0);
-    }
+const ChatbotWrapper = styled.div<{ $isActive: boolean }>`
+  border-radius: 10px;
+  bottom: 3%;
+  box-shadow: 0px 2px 5px 1px rgba(0, 0, 0, 0.151);
+  height: 700px;
+  position: fixed;
+  right: 3%;
+  width: 380px;
+  z-index: 11;
+
+  @media (max-width: 768px) {
+    border-radius: 0;
+    bottom: 0;
+    box-shadow: none;
+    height: 100vh;
+    right: 0;
+    width: 100vw;
   }
 
-  animation: slideUp 0.5s ease-in-out; */
-`;
-
-const CarouselContainer = styled.div`
-  margin-top: 8px;
-  width: 100%;
-
-  .slick-list {
-    margin: 0 -8px;
-  }
-  .slick-slide > div {
-    padding: 0 8px;
-  }
+  ${({ $isActive }) =>
+    $isActive === true
+      ? css`
+          opacity: 1;
+          pointer-events: auto;
+          transform: translateY(0%);
+          transition: transform 300ms cubic-bezier(0, 0.95, 0.1, 1) 0s,
+            opacity 150ms linear 0s;
+        `
+      : css`
+          opacity: 0;
+          pointer-events: none;
+          transform: translateY(100%);
+          transition: transform 300ms cubic-bezier(0.85, 0, 0.6, 1) 0s,
+            opacity 150ms linear 0s;
+        `}
 `;
 
 const App = () => {
-  const [errorMessage, setErrorMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<MessageProps[]>([]);
-  const [sessionId, setSessionId] = useState(localStorage.getItem("cb_id"));
+  const [sessionId, setSessionId] = useState(
+    localStorage.getItem("cb_id") || ""
+  );
   const [websiteData, setWebsiteData] = useState<WebsiteProps>();
   const [websiteId] = useState(window.location.pathname.split("/")[1]);
-
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -112,173 +131,34 @@ const App = () => {
         );
       } catch (error) {
         console.log(error);
-        setErrorMessage("챗봇을 불러오는데 실패했습니다.");
-        ui("#snackbar");
+        console.log("챗봇을 불러오는데 실패했습니다.");
       }
     };
     initializeSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (scrollRef.current?.scrollHeight) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const handleSendMessage = async () => {
-    try {
-      if (sessionId) {
-        if (!isSending && message) {
-          setIsSending(true);
-          setMessages([
-            ...messages,
-            {
-              role: "user",
-              children: [{ content: message }],
-              id: "temp",
-              createdAt: new Date().toISOString(),
-            },
-          ]);
-          setMessage("");
-          const newMessage = await sendMessage(websiteId, sessionId, message);
-          const reply = await getReply(websiteId, sessionId, newMessage.id);
-          setMessages([...messages, newMessage, ...reply]);
-          setIsSending(false);
-        }
-      } else {
-        throw new Error("메시지 전송에 실패했습니다. 새로고침 해주세요.");
-      }
-    } catch (error) {
-      console.log(error);
-      setIsSending(false);
-      setErrorMessage("메시지 전송에 실패했습니다.");
-      ui("#snackbar");
-    }
-  };
-
   return (
-    <div style={{ height: "100%", overflow: "hidden" }}>
-      <Header imageUrl={websiteData?.imageUrl} name={websiteData?.name} />
-      <Body className="scroll" ref={scrollRef}>
-        <Disclaimer>{websiteData?.disclaimer}</Disclaimer>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {messages.map((message) =>
-            message.children.length === 0 ? null : message.children.length ===
-              1 ? (
-              <MessageContainer key={message.id}>
-                {message.role === "user" && (
-                  <div style={{ flexGrow: 1, width: "64px" }} />
-                )}
-                <ChatBubble
-                  content={message.children[0].content}
-                  defaultImage={websiteData?.imageUrl ?? ""}
-                  imageUrl={message.children[0].imageUrl}
-                  key={message.id}
-                  role={message.role}
-                  title={message.children[0].title}
-                  url={message.children[0].url}
-                />
-                {message.role === "assistant" && (
-                  <div style={{ flexGrow: 1, width: "64px" }} />
-                )}
-              </MessageContainer>
-            ) : (
-              <CarouselContainer key={message.id}>
-                <Carousel
-                  arrows={false}
-                  centerMode
-                  className="center"
-                  infinite={false}
-                  slidesToScroll={5}
-                  slidesToShow={5}
-                  responsive={[
-                    {
-                      breakpoint: 1024,
-                      settings: {
-                        arrows: false,
-                        centerMode: false,
-                        dots: true,
-                        infinite: true,
-                        slidesToScroll: 3,
-                        slidesToShow: 3,
-                      },
-                    },
-                    {
-                      breakpoint: 600,
-                      settings: {
-                        arrows: false,
-                        centerMode: false,
-                        initialSlide: 2,
-                        slidesToScroll: 2,
-                        slidesToShow: 2,
-                      },
-                    },
-                    {
-                      breakpoint: 480,
-                      settings: {
-                        arrows: false,
-                        slidesToShow: 1,
-                        slidesToScroll: 1,
-                      },
-                    },
-                  ]}
-                >
-                  {message.children.map((childMessage, index) => (
-                    <ChatBubble
-                      content={childMessage.content}
-                      defaultImage={websiteData?.imageUrl ?? ""}
-                      imageUrl={childMessage.imageUrl}
-                      key={`${message.id}_${index}`}
-                      role={message.role}
-                      title={childMessage.title}
-                      url={childMessage.url}
-                    />
-                  ))}
-                </Carousel>
-              </CarouselContainer>
-            )
-          )}
-          {messages[messages.length - 1]?.role &&
-            messages[messages.length - 1].createdAt && (
-              <div style={{ padding: "8px 16px" }}>
-                <Timestamp
-                  role={messages[messages.length - 1].role}
-                  time={messages[messages.length - 1].createdAt}
-                />
-              </div>
-            )}
-          {isSending && (
-            <MessageContainer>
-              <ChatBubble
-                content={
-                  <div style={{ width: "250px" }}>
-                    <Skeleton />
-                  </div>
-                }
-                role="assistant"
-                defaultImage=""
-              />
-            </MessageContainer>
-          )}
-        </div>
-        <FooterSpacer />
-      </Body>
-      <Footer
-        isSending={isSending}
-        handleSendMessage={handleSendMessage}
-        message={message}
-        setMessage={setMessage}
-      />
-      <div className="snackbar error" id="snackbar">
-        <i>warning</i>
-        <span>{errorMessage}</span>
-      </div>
+    <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
+      {websiteData ? (
+        <>
+          <Fab
+            $open={open}
+            className="square round extra primary-container"
+            onClick={() => setOpen(!open)}
+          >
+            <i className="extra">psychology</i>
+          </Fab>
+          <ChatbotWrapper $isActive={open}>
+            <Chatbot
+              initialMessages={messages}
+              sessionId={sessionId}
+              setClose={() => setOpen(false)}
+              websiteData={websiteData}
+            />
+          </ChatbotWrapper>
+        </>
+      ) : null}
     </div>
   );
 };

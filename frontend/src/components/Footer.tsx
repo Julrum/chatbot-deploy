@@ -16,17 +16,18 @@ const InputComponent = styled.div<{ $isActive: boolean }>`
 `;
 
 const SendButton = styled.button<{ $isActive: boolean }>`
+  bottom: 20px;
+  opacity: 0 !important;
   position: fixed;
   right: 16px;
-  bottom: 20px;
-  transform: translateX(200%);
-  transition: background-color 150ms ease 0s, transform 150ms ease 0s;
+  transition: opacity 150ms ease 0s;
 
   ${({ $isActive }) =>
     $isActive &&
     css`
-      transform: translateX(0%);
       cursor: pointer;
+      opacity: 1 !important;
+      transform: translateX(0%);
     `}
 `;
 
