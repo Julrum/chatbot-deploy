@@ -32,7 +32,8 @@ app.post("/", async (req, res) => {
   if (!likeMessage.websiteId 
     || !likeMessage.sessionId 
     || !likeMessage.like 
-    || !likeMessage.comment) {
+    || likeMessage.comment === undefined
+    || likeMessage.comment === null) {
     res.status(400).send({
       message: `Missing required fields, got: ${JSON.stringify(likeMessage)}`
     } as StringMessage);
