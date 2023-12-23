@@ -132,6 +132,22 @@ gcloud compute networks vpc-access connectors create chroma-connector \
 --region us-central1 \
 --range 10.8.0.0/28
 ```
+위 명령어에서 아래와 같은 에러가 발생할 수 있다.
+```text
+ERROR: (gcloud.compute.networks.vpc-access.connectors.create) {
+  "code": 9,
+  "message": "Operation failed: Insufficient CPU quota in region."
+}
+```
+이 경우에는, 아래와 같이 최대/최소 인스턴스 개수를 명시해주면 된다. [관련 Stackoverflow](https://stackoverflow.com/questions/70562667/creating-new-gcp-serverless-vpc-access-connection-error-insufficient-cpu-quota)
+```bash
+gcloud compute networks vpc-access connectors create chroma-connector \
+--network chroma \
+--region us-central1 \
+--range 10.8.0.0/28 \
+--min-instances 2 \
+--max-instances 3
+```
 
 VPC Serverless Access Connector 확인
 ```bash
