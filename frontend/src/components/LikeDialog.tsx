@@ -1,14 +1,15 @@
 import { useState } from "react";
+import { LikeUnLike } from "@orca.ai/pulse";
 
 const LikeDialog = ({
+  handleLike,
   id,
-  setErrorMessage,
 }: {
+  handleLike: (isLike: LikeUnLike, comment: string) => Promise<void>;
   id?: string;
-  setErrorMessage: React.Dispatch<React.SetStateAction<string>>;
 }) => {
-  const [isLike, setIsLike] = useState(true);
-  const [message, setMessage] = useState("");
+  const [isLike, setIsLike] = useState<LikeUnLike>(LikeUnLike.like);
+  const [comment, setComment] = useState("");
 
   return (
     <dialog className="top" id={id}>
@@ -18,18 +19,20 @@ const LikeDialog = ({
           <button
             className="transparent circle large"
             onClick={() => {
-              setIsLike(true);
+              setIsLike(LikeUnLike.like);
             }}
           >
-            <i className={isLike ? "fill" : ""}>thumb_up</i>
+            <i className={isLike === LikeUnLike.like ? "fill" : ""}>thumb_up</i>
           </button>
           <button
             className="transparent circle large"
             onClick={() => {
-              setIsLike(false);
+              setIsLike(LikeUnLike.unlike);
             }}
           >
-            <i className={isLike ? "" : "fill"}>thumb_down</i>
+            <i className={isLike === LikeUnLike.unlike ? "fill" : ""}>
+              thumb_down
+            </i>
           </button>
         </nav>
       </header>
@@ -37,10 +40,10 @@ const LikeDialog = ({
         <div className="field textarea border">
           <textarea
             onChange={(event) => {
-              setMessage(event.target.value);
+              setComment(event.target.value);
             }}
             placeholder="의견을 자유롭게 적어주세요."
-            value={message}
+            value={comment}
           />
         </div>
       </div>
@@ -49,17 +52,11 @@ const LikeDialog = ({
           취소
         </button>
         <button
-          onClick={() => {
-            try {
-            } catch (error) {
-              console.error(error);
-              setErrorMessage("의견을 보내는데 실패했습니다.");
-              ui("#snackbar");
-            }
-
+          onClick={async () => {
+            await handleLike(isLike, comment);
             ui("#likeDialog");
-            setIsLike(true);
-            setMessage("");
+            setIsLike(LikeUnLike.like);
+            setComment("");
           }}
         >
           보내기

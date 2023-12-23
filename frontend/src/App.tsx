@@ -2,8 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import Skeleton from "react-loading-skeleton";
 import Carousel from "react-slick";
 import styled from "styled-components";
-import { ChatClient, MessageRole } from "@orca.ai/pulse";
-import type { Message, Website } from "@orca.ai/pulse";
+import {
+  ChatClient,
+  LikeClient,
+  MessageRole,
+  invalidMessageId,
+} from "@orca.ai/pulse";
+import type { LikeUnLike, Message, Website } from "@orca.ai/pulse";
 
 import ChatBubble from "./components/ChatBubble";
 import Disclaimer from "./components/Disclaimer";
@@ -24,7 +29,6 @@ const FooterSpacer = styled.div`
 const Body = styled.main`
   -ms-overflow-style: none;
   height: calc(var(--app-height) - 64px);
-  overflow-x: hidden;
   scrollbar-width: none;
 
   &::-webkit-scrollbar {
@@ -73,7 +77,12 @@ const App = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const chatClient = new ChatClient(process.env.REACT_APP_API_URL ?? "");
+  const chatClient = new ChatClient(
+    `${process.env.REACT_APP_API_URL}/chat` ?? ""
+  );
+  const likeClient = new LikeClient(
+    `${process.env.REACT_APP_API_URL}/like` ?? ""
+  );
 
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -181,6 +190,24 @@ const App = () => {
     }
   };
 
+  const handleLike = async (isLike: LikeUnLike, comment: string) => {
+    if (sessionId && messages[messages.length - 1]?.id) {
+      try {
+        await likeClient.sendLikeOrUnlike(
+          websiteId,
+          sessionId,
+          messages[messages.length - 1].id ?? invalidMessageId,
+          isLike,
+          comment
+        );
+      } catch (error) {
+        console.error(error);
+        setErrorMessage("의견을 보내는데 실패했습니다.");
+        ui("#snackbar");
+      }
+    }
+  };
+
   return (
     <div style={{ height: "100%", overflow: "hidden" }}>
       <Header
@@ -225,7 +252,6 @@ const App = () => {
                   infinite={false}
                   slidesToScroll={5}
                   slidesToShow={5}
-                  touchThreshold={100}
                   responsive={[
                     {
                       breakpoint: 1024,
@@ -311,7 +337,7 @@ const App = () => {
         <i>warning</i>
         <span>{errorMessage}</span>
       </div>
-      <LikeDialog id="likeDialog" setErrorMessage={setErrorMessage} />
+      <LikeDialog id="likeDialog" handleLike={handleLike} />
     </div>
   );
 };
