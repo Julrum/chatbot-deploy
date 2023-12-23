@@ -27,6 +27,7 @@ export enum FunctionName {
   crawler = 'crawler',
   chroma = 'chroma',
   like = 'like',
+  errorReport = 'errorReport',
   // prompt = 'prompt',
 }
 

@@ -18,5 +18,10 @@
     "local": "http://localhost:8083",
     "dev": "https://us-central1-chatbot-dev-406508.cloudfunctions.net/like",
     "prod": "https://us-central1-chatbot-32ff4.cloudfunctions.net/like"
+  },
+  "errorReport": {
+    "local": "http://localhost:8084",
+    "dev": "https://us-central1-chatbot-dev-406508.cloudfunctions.net/errorReport",
+    "prod": "https://us-central1-chatbot-32ff4.cloudfunctions.net/errorReport"
   }
 }

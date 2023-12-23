@@ -53,7 +53,19 @@
     "build:like:prod": "npm run build && cd ../like && npm run config:prod && npm run build",
     "deploy:like:local": "npm run build:like:local && cd ../like && node lib/index.js",
     "deploy:like:dev": "npm run build:like:dev && node lib/deploy/like.js -p dev",
-    "deploy:like:prod": "npm run build:like:prod && node lib/deploy/like.js -p prod"
+    "deploy:like:prod": "npm run build:like:prod && node lib/deploy/like.js -p prod",
+    "cli:error-report:local": "npm run build && node lib/cli/error-report.js http://localhost:8084",
+    "cli:error-report:dev": "npm run build && node lib/cli/error-report.js https://us-central1-chatbot-dev-406508.cloudfunctions.net/errorReport",
+    "cli:error-report:prod": "npm run build && node lib/cli/error-report.js https://us-central1-chatbot-32ff4.cloudfunctions.net/errorReport",
+    "test:error-report:local": "npm run build && PHASE=local ./node_modules/.bin/jest --verbose lib/test/error-report.test.js",
+    "test:error-report:dev": "npm run build && PHASE=dev ./node_modules/.bin/jest --verbose lib/test/error-report.test.js",
+    "test:error-report:prod": "npm run build && PHASE=prod ./node_modules/.bin/jest --verbose lib/test/error-report.test.js",
+    "build:error-report:local": "npm run build && cd ../error-report && npm run config:local && npm run build",
+    "build:error-report:dev": "npm run build && cd ../error-report && npm run config:dev && npm run build",
+    "build:error-report:prod": "npm run build && cd ../error-report && npm run config:prod && npm run build",
+    "deploy:error-report:local": "npm run build:error-report:local && cd ../error-report && node lib/index.js",
+    "deploy:error-report:dev": "npm run build:error-report:dev && node lib/deploy/error-report.js -p dev",
+    "deploy:error-report:prod": "npm run build:error-report:prod && node lib/deploy/error-report.js -p prod"
   },
   "author": "Seungpyo Hong",
   "license": "ISC",
@@ -68,7 +80,7 @@
     "@google-cloud/functions": "^3.0.1",
     "@google-cloud/iam": "^1.0.1",
     "@google-cloud/iam-credentials": "^3.0.1",
-    "@orca.ai/pulse": "^1.0.48",
+    "@orca.ai/pulse": "^1.0.55",
     "firebase-admin": "^12.0.0",
     "google-auth-library": "^9.4.1"
   }

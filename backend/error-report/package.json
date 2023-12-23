@@ -1,0 +1,24 @@
+{
+  "name": "error-report",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "config:local": "cp ./src/configs/local.ts ./src/configs/config.ts",
+    "config:dev": "cp ./src/configs/dev.ts ./src/configs/config.ts",
+    "config:prod": "cp ./src/configs/prod.ts ./src/configs/config.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@orca.ai/pulse": "^1.0.55",
+    "@types/cors": "^2.8.17",
+    "cors": "^2.8.5",
+    "firebase-functions": "^4.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
