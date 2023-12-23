@@ -23,6 +23,7 @@ const FooterSpacer = styled.div`
 const Body = styled.main`
   -ms-overflow-style: none;
   height: calc(var(--app-height) - 64px);
+  overflow-x: hidden;
   scrollbar-width: none;
 
   &::-webkit-scrollbar {
