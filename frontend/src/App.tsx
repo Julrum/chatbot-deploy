@@ -220,6 +220,7 @@ const App = () => {
                   infinite={false}
                   slidesToScroll={5}
                   slidesToShow={5}
+                  touchThreshold={100}
                   responsive={[
                     {
                       breakpoint: 1024,
