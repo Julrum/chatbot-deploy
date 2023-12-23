@@ -1650,10 +1650,10 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@orca.ai/pulse@^1.0.38":
-  version "1.0.38"
-  resolved "https://registry.yarnpkg.com/@orca.ai/pulse/-/pulse-1.0.38.tgz#5a28022a6b838106fb95bde22bb88667627ef397"
-  integrity sha512-37kWjzgkNvfQXZKImaQZGxDtc2E20kb1/YzUpS+qJF1BJnIDl1UroveK1HiWcwHoYJvIz/GNIj8K1j357uZ5Mg==
+"@orca.ai/pulse@^1.0.48":
+  version "1.0.48"
+  resolved "https://registry.yarnpkg.com/@orca.ai/pulse/-/pulse-1.0.48.tgz#0962c164cba0e9ccf2cdb7341e50c0e58be6be2b"
+  integrity sha512-q+tGsYL3p1Zy8ftIiPUBKctPwc/EFo+BuFfHrNiM9aqS3OVKZLc6s9YpuJhD3CFtl5L5uPXB1axkxCvyIWKq5w==
 
 "@pmmmwh/react-refresh-webpack-plugin@^0.5.3":
   version "0.5.11"
