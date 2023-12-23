@@ -9,6 +9,7 @@ import ChatBubble from "./components/ChatBubble";
 import Disclaimer from "./components/Disclaimer";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
+import LikeDialog from "./components/LikeDialog";
 import Timestamp from "./components/Timestamp";
 
 import "slick-carousel/slick/slick.css";
@@ -182,7 +183,11 @@ const App = () => {
 
   return (
     <div style={{ height: "100%", overflow: "hidden" }}>
-      <Header imageUrl={websiteData?.imageUrl} name={websiteData?.name} />
+      <Header
+        imageUrl={websiteData?.imageUrl}
+        name={websiteData?.name}
+        onLikeButtonClick={() => ui("#likeDialog")}
+      />
       <Body className="scroll surface" ref={scrollRef}>
         <Disclaimer>{websiteData?.disclaimer}</Disclaimer>
         <div
@@ -306,6 +311,7 @@ const App = () => {
         <i>warning</i>
         <span>{errorMessage}</span>
       </div>
+      <LikeDialog id="likeDialog" setErrorMessage={setErrorMessage} />
     </div>
   );
 };
