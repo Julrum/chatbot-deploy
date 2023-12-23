@@ -1,5 +1,5 @@
 import {Response} from "express";
-import {HttpError} from "@orca.ai/pulse";
+import {StringMessage} from "@orca.ai/pulse";
 
 /**
  * Sends an error response to the client with the given error.
@@ -9,8 +9,9 @@ import {HttpError} from "@orca.ai/pulse";
  * @param {Function} loggerCallback
  * @return {void}
  */
-export function sendError({res, error, showStack, loggerCallback}: {
+export function sendError({res, statusCode, error, showStack, loggerCallback}: {
   res: Response,
+  statusCode: number,
   error: Error,
   showStack: boolean,
   loggerCallback?: (message: string) => void,
@@ -20,12 +21,7 @@ export function sendError({res, error, showStack, loggerCallback}: {
   const errorMessage = error.message +
     (showStack ? `\nSTACK DUMP:\n${error.stack}` : "");
   loggerCallback && loggerCallback(error.message);
-  if (error instanceof HttpError) {
-    res.status(error.statusCode).send({
-      message: errorMessage,
-      statusCode: error.statusCode,
-    });
-    return;
-  }
-  res.status(500).send(JSON.stringify(error));
+  res.status(statusCode).send({
+    message: errorMessage,
+  } as StringMessage);
 }

@@ -3,7 +3,7 @@ import * as admin from "firebase-admin";
 import * as cors from "cors";
 import * as express from "express";
 import * as functions from "firebase-functions/v2/https";
-import {PingResponse, ResourceName} from "@orca.ai/pulse";
+import {PingResponse, ResourceName, StringMessage} from "@orca.ai/pulse";
 import {
   getWebsite,
   postWebsite,
@@ -54,6 +54,12 @@ app.get(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionI
 app.delete(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionId/${ResourceName.Messages}/:messageId`, deleteMessage);
 
 app.get(`/${ResourceName.Websites}/:websiteId/${ResourceName.Sessions}/:sessionId/${ResourceName.Messages}/:messageId/reply`, getReply);
+
+app.use((req, res) => {
+  res.status(404).send({
+    message: `Route ${req.url} not found. Maybe you forgot to add resource paths?`,
+  } as StringMessage);
+});
 
 config.listen(app);
 export const chat = functions.onRequest(app);

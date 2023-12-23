@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteWebsite = exports.listWebsites = exports.postWebsite = exports.getWebsite = void 0;
 const websites_1 = require("../dao/websites");
-const https_1 = require("firebase-functions/v2/https");
 const v2_1 = require("firebase-functions/v2");
 const error_handler_1 = require("../util/error-handler");
 /**
@@ -35,17 +34,13 @@ const getWebsite = async (req, res) => {
         res.status(200).send(filledWebsite);
     }
     catch (error) {
-        if (error instanceof https_1.HttpsError) {
-            v2_1.logger.error(`HTTPS error: ${error.message}, \
-      error code = ${error.httpErrorCode}`);
-            res.status(error.httpErrorCode.status).send(error.message);
-            return;
-        }
-        else {
-            v2_1.logger.error(`Non-HTTPS error: ${JSON.stringify(error)}, \
-      error code = 500`);
-            res.status(500).send(JSON.stringify(error));
-        }
+        (0, error_handler_1.sendError)({
+            res,
+            statusCode: error.statusCode,
+            error: error,
+            showStack: true,
+            loggerCallback: v2_1.logger.error,
+        });
     }
 };
 exports.getWebsite = getWebsite;
@@ -78,6 +73,7 @@ const postWebsite = async (req, res) => {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: v2_1.logger.error,
@@ -95,6 +91,7 @@ const listWebsites = async (req, res) => {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: v2_1.logger.error,
@@ -116,6 +113,7 @@ const deleteWebsite = async (req, res) => {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: v2_1.logger.error,

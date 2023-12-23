@@ -17,7 +17,13 @@ beforeEach(async () => {
   chatClient = new ChatClient(chatURL);
   chromaClient = new ChromaClient(chromaURL);
   const testCollectionName = `test-collection-${(new Date()).getTime()}`
-  await chromaClient.createCollection(testCollectionName);
+  try {
+    await chromaClient.createCollection(testCollectionName);
+  } catch (error) {
+    console.error(`Failed to create test collection: ${testCollectionName}`);
+    console.error(`Maybe the Chroma API is not running?`);
+    throw error;
+  }
 });
 afterEach(async () => {
   if (testCollection === undefined) {
@@ -27,6 +33,16 @@ afterEach(async () => {
 });
 
 describe('Chat REST API Test', () => {
+  it ('Chat API ping test', async () => {
+    try {
+      const res = await chatClient.ping();
+      expect(res.message).toBe("pong");
+    } catch (error) {
+      console.error(`Client url: ${chatClient.baseUrl}`);
+      console.error(`Failed to ping: ${error}`);
+      throw error;
+    }
+  });
   it('Message CRUD', async () => {
     const websiteToAdd: Website = {
       id: null,

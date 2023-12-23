@@ -27,6 +27,7 @@ async function getMessage(req, res) {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: firebase_functions_1.logger.error,
@@ -56,6 +57,7 @@ async function postMessage(req, res) {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: new Error(`Failed to add message at websiteId=${req.params.websiteId}, sessionId=${req.params.sessionId}, message=${JSON.stringify(req.body)}`),
             showStack: true,
             loggerCallback: firebase_functions_1.logger.error,
@@ -82,6 +84,7 @@ async function listMessages(req, res) {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: firebase_functions_1.logger.error,
@@ -108,6 +111,7 @@ async function deleteMessage(req, res) {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: firebase_functions_1.logger.error,
@@ -133,6 +137,7 @@ async function getReply(req, res) {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: 500,
             error: error,
             showStack: true,
             loggerCallback: firebase_functions_1.logger.error,
@@ -157,6 +162,7 @@ async function getReply(req, res) {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: firebase_functions_1.logger.error,
@@ -170,6 +176,7 @@ async function getReply(req, res) {
     history=${JSON.stringify(history)}`);
         (0, error_handler_1.sendError)({
             res,
+            statusCode: e.statusCode,
             error: e,
             showStack: true,
             loggerCallback: firebase_functions_1.logger.error,
@@ -180,6 +187,7 @@ async function getReply(req, res) {
     if (userMessages.length === 0) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: 404,
             error: new pulse_1.HttpError(404, `No user message found in \
       websiteId=${websiteId}, sessionId=${sessionId}, \
       history=${JSON.stringify(history)}`),
@@ -300,6 +308,7 @@ async function getReply(req, res) {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: firebase_functions_1.logger.error,
@@ -334,6 +343,7 @@ async function getReply(req, res) {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: firebase_functions_1.logger.error,

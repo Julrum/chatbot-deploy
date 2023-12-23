@@ -38,6 +38,7 @@ export async function getMessage(req: Request, res: Response): Promise<void> {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -70,6 +71,7 @@ export async function postMessage(req: Request, res: Response): Promise<void> {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: new Error(`Failed to add message at websiteId=${req.params.websiteId}, sessionId=${req.params.sessionId}, message=${JSON.stringify(req.body)}`),
       showStack: true,
       loggerCallback: logger.error,
@@ -98,6 +100,7 @@ export async function listMessages(req: Request, res: Response): Promise<void> {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -128,6 +131,7 @@ export async function deleteMessage(
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -152,6 +156,7 @@ export async function getReply(req: Request, res: Response): Promise<void> {
   } catch (error) {
     sendError({
       res,
+      statusCode: 500,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -176,6 +181,7 @@ export async function getReply(req: Request, res: Response): Promise<void> {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -189,6 +195,7 @@ export async function getReply(req: Request, res: Response): Promise<void> {
     history=${JSON.stringify(history)}`);
     sendError({
       res,
+      statusCode: e.statusCode,
       error: e,
       showStack: true,
       loggerCallback: logger.error,
@@ -199,6 +206,7 @@ export async function getReply(req: Request, res: Response): Promise<void> {
   if (userMessages.length === 0) {
     sendError({
       res,
+      statusCode: 404,
       error: new HttpError(404, `No user message found in \
       websiteId=${websiteId}, sessionId=${sessionId}, \
       history=${JSON.stringify(history)}`),
@@ -322,6 +330,7 @@ export async function getReply(req: Request, res: Response): Promise<void> {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -354,6 +363,7 @@ export async function getReply(req: Request, res: Response): Promise<void> {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,

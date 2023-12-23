@@ -331,6 +331,12 @@ app.post("/collections/:collectionId/query", async (req, res) => {
         });
     }
 });
+app.use((req, res) => {
+    res.status(404).send({
+        // eslint-disable-next-line max-len
+        message: `Route ${req.url} not found. Maybe you forgot to add resource paths?`,
+    });
+});
 config_1.config.listen(app);
 exports.chroma = (0, https_1.onRequest)(app);
 //# sourceMappingURL=index.js.map

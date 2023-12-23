@@ -35,9 +35,15 @@ export class SessionDAO extends BaseChatDAO<Session> {
       // eslint-disable-next-line max-len
       throw new HttpError(404, `Session ${sessionId} not found, website ${websiteId}`);
     }
-    const message = convertResourceDates(
+    let session: Session;
+    try {
+      session = convertResourceDates(
       snapshot.data() as Session) as Session;
-    return message;
+    } catch (error) {
+      // eslint-disable-next-line max-len
+      throw new HttpError(500, `Error converting session ${sessionId} to Session object, website ${websiteId}, error: ${error}`);
+    }
+    return session;
   }
   /**
    * Add a message to a session

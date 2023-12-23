@@ -15,6 +15,7 @@ const getSession = async (req, res) => {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: v2_1.logger.error,
@@ -32,6 +33,7 @@ const postSession = async (req, res) => {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: v2_1.logger.error,
@@ -41,6 +43,12 @@ const postSession = async (req, res) => {
 exports.postSession = postSession;
 const listSessions = async (req, res) => {
     const websiteId = req.params.websiteId;
+    if (!websiteId) {
+        res.status(400).send({
+            message: "Missing website ID",
+        });
+        return;
+    }
     const dao = new sessions_1.SessionDAO();
     try {
         const sessions = await dao.list(websiteId);
@@ -49,6 +57,7 @@ const listSessions = async (req, res) => {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: v2_1.logger.error,
@@ -69,6 +78,7 @@ const deleteSession = async (req, res) => {
     catch (error) {
         (0, error_handler_1.sendError)({
             res,
+            statusCode: error.statusCode,
             error: error,
             showStack: true,
             loggerCallback: v2_1.logger.error,

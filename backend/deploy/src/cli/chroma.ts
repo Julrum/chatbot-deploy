@@ -37,7 +37,7 @@ async function main() {
   console.log("Welcome to Chroma DB Console");
   console.log("Using API at: " + apiURL);
   while (true) {
-    const line = await question(">>> ");
+    const line = await question(">>> ", "");
     if (!line) {
       continue;
     }

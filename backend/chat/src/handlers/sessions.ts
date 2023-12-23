@@ -2,7 +2,7 @@ import {Request, Response} from "express";
 import {sendError} from "../util/error-handler";
 import {logger} from "firebase-functions/v2";
 import {SessionDAO} from "../dao/sessions";
-import {StringMessage} from "@orca.ai/pulse";
+import {HttpError, StringMessage} from "@orca.ai/pulse";
 
 export const getSession = async (req: Request, res: Response) => {
   const websiteId = req.params.websiteId;
@@ -14,6 +14,7 @@ export const getSession = async (req: Request, res: Response) => {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -30,6 +31,7 @@ export const postSession = async (req: Request, res: Response) => {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -39,6 +41,12 @@ export const postSession = async (req: Request, res: Response) => {
 
 export const listSessions = async (req: Request, res: Response) => {
   const websiteId = req.params.websiteId;
+  if (!websiteId) {
+    res.status(400).send({
+      message: "Missing website ID",
+    } as StringMessage);
+    return;
+  }
   const dao = new SessionDAO();
   try {
     const sessions = await dao.list(websiteId);
@@ -46,6 +54,7 @@ export const listSessions = async (req: Request, res: Response) => {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -65,6 +74,7 @@ export const deleteSession = async (req: Request, res: Response) => {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,

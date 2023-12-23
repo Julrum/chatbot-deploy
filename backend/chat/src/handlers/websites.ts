@@ -1,7 +1,6 @@
 import {Request, Response} from "express";
 import {WebsiteDAO} from "../dao/websites";
-import {StringMessage, Website} from "@orca.ai/pulse";
-import {HttpsError} from "firebase-functions/v2/https";
+import {StringMessage, Website, HttpError} from "@orca.ai/pulse";
 import {logger} from "firebase-functions/v2";
 import {sendError} from "../util/error-handler";
 /**
@@ -33,16 +32,13 @@ export const getWebsite = async (req: Request, res: Response) => {
     const filledWebsite = fillWebsiteOptionalFields(website);
     res.status(200).send(filledWebsite);
   } catch (error) {
-    if (error instanceof HttpsError) {
-      logger.error(`HTTPS error: ${error.message}, \
-      error code = ${error.httpErrorCode}`);
-      res.status(error.httpErrorCode.status).send(error.message);
-      return;
-    } else {
-      logger.error(`Non-HTTPS error: ${JSON.stringify(error)}, \
-      error code = 500`);
-      res.status(500).send(JSON.stringify(error));
-    }
+    sendError({
+      res,
+      statusCode: (error as HttpError).statusCode,
+      error: error as Error,
+      showStack: true,
+      loggerCallback: logger.error,
+    });
   }
 };
 
@@ -71,6 +67,7 @@ export const postWebsite = async (req: Request, res: Response) => {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -88,6 +85,7 @@ export const listWebsites = async (req: Request, res: Response) => {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,
@@ -108,6 +106,7 @@ export const deleteWebsite = async (req: Request, res: Response) => {
   } catch (error) {
     sendError({
       res,
+      statusCode: (error as HttpError).statusCode,
       error: error as Error,
       showStack: true,
       loggerCallback: logger.error,

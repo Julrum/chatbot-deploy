@@ -35,6 +35,11 @@ exports.app.post(`/${pulse_1.ResourceName.Websites}/:websiteId/${pulse_1.Resourc
 exports.app.get(`/${pulse_1.ResourceName.Websites}/:websiteId/${pulse_1.ResourceName.Sessions}/:sessionId/${pulse_1.ResourceName.Messages}`, messages_1.listMessages);
 exports.app.delete(`/${pulse_1.ResourceName.Websites}/:websiteId/${pulse_1.ResourceName.Sessions}/:sessionId/${pulse_1.ResourceName.Messages}/:messageId`, messages_1.deleteMessage);
 exports.app.get(`/${pulse_1.ResourceName.Websites}/:websiteId/${pulse_1.ResourceName.Sessions}/:sessionId/${pulse_1.ResourceName.Messages}/:messageId/reply`, messages_1.getReply);
+exports.app.use((req, res) => {
+    res.status(404).send({
+        message: `Route ${req.url} not found. Maybe you forgot to add resource paths?`,
+    });
+});
 config_1.config.listen(exports.app);
 exports.chat = functions.onRequest(exports.app);
 //# sourceMappingURL=index.js.map

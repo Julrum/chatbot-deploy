@@ -9,7 +9,7 @@ export function question(questionText: string, defaultValue?: string): Promise<s
   return new Promise<string>(resolve => rl.question(questionText, resolve))
     .then((answer) => {
       if (!answer || answer.length === 0) {
-        if (!defaultValue) {
+        if (defaultValue === null || defaultValue === undefined) {
           throw new Error(`Got invalid user input: ${answer}, without default`);
         }
         return defaultValue;

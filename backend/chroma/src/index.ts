@@ -344,6 +344,11 @@ app.post("/collections/:collectionId/query",
     }
   }
 );
-
+app.use((req, res) => {
+  res.status(404).send({
+    // eslint-disable-next-line max-len
+    message: `Route ${req.url} not found. Maybe you forgot to add resource paths?`,
+  } as StringMessage);
+});
 config.listen(app);
 export const chroma = onRequest(app);

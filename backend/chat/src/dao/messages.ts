@@ -27,14 +27,20 @@ export class MessageDAO extends BaseChatDAO<Message> {
     websiteId: string,
     sessionId: string,
     messageId: string): Promise<Message> {
-    const snapshot = await this.client
-      .collection(ResourceName.Websites)
-      .doc(websiteId)
-      .collection(ResourceName.Sessions)
-      .doc(sessionId)
-      .collection(ResourceName.Messages)
-      .doc(messageId)
-      .get();
+    let snapshot: FirebaseFirestore.DocumentSnapshot;
+    try {
+      snapshot = await this.client
+        .collection(ResourceName.Websites)
+        .doc(websiteId)
+        .collection(ResourceName.Sessions)
+        .doc(sessionId)
+        .collection(ResourceName.Messages)
+        .doc(messageId)
+        .get();
+    } catch (error) {
+      // eslint-disable-next-line max-len
+      throw new HttpError(404, `Message ${messageId} not found, website ${websiteId}, session ${sessionId}, error: ${error}`);
+    }
     if (!snapshot.exists) {
       // eslint-disable-next-line max-len
       throw new HttpError(404, `Message ${messageId} not found, website ${websiteId}, session ${sessionId}`);
@@ -74,7 +80,12 @@ export class MessageDAO extends BaseChatDAO<Message> {
       .doc();
     message.id = ref.id;
     message.createdAt = new Date();
-    await ref.set(message).then(() => message);
+    try {
+      await ref.set(message).then(() => message);
+    } catch (error) {
+      // eslint-disable-next-line max-len
+      throw new HttpError(500, `Failed to add message ${message.id}, error: ${error}`);
+    }
     return message;
   }
   /**
@@ -94,7 +105,12 @@ export class MessageDAO extends BaseChatDAO<Message> {
       .doc(sessionId)
       .collection(ResourceName.Messages)
       .doc(messageId);
-    await ref.delete();
+    try {
+      await ref.get();
+    } catch (error) {
+      // eslint-disable-next-line max-len
+      throw new HttpError(404, `Message ${messageId} not found, website ${websiteId}, session ${sessionId}, error: ${error}`);
+    }
   }
   /**
    * List all messages in a session.
@@ -109,10 +125,22 @@ export class MessageDAO extends BaseChatDAO<Message> {
       .doc(sessionId)
       .collection(ResourceName.Messages)
       .orderBy("createdAt", "asc");
-    const messages = await ref.get();
-    return messages.docs.map((doc) => {
-      return convertResourceDates(doc.data() as Message) as Message;
-    });
+    let snapshot: FirebaseFirestore.QuerySnapshot;
+    try {
+      snapshot = await ref.get();
+    } catch (e) {
+      throw new HttpError(404, `Session ${sessionId} not found, error: ${e}`);
+    }
+    let messages: Message[] = [];
+    try {
+      messages = snapshot.docs.map((doc) => {
+        return convertResourceDates(doc.data() as Message) as Message;
+      });
+    } catch (e) {
+      // eslint-disable-next-line max-len
+      throw new HttpError(500, `Failed to convert firestore snapshot to Message[], error: ${e}`);
+    }
+    return messages;
   }
   /**
    * List the most recent N messages in a session.
@@ -133,15 +161,33 @@ export class MessageDAO extends BaseChatDAO<Message> {
       .collection(ResourceName.Messages)
       .orderBy("createdAt", "desc")
       .limit(n);
-    const snapshot = await ref.get();
-    const messages = snapshot.docs.map((doc) => {
-      return convertResourceDates(doc.data() as Message) as Message;
-    });
-    const sortedMessages = messages.sort((a, b) => {
-      const lhs = a.createdAt ? a.createdAt : new Date(0);
-      const rhs = b.createdAt ? b.createdAt : new Date(0);
-      return lhs.getTime() - rhs.getTime();
-    });
+    let snapshot: FirebaseFirestore.QuerySnapshot;
+    try {
+      snapshot = await ref.get();
+    } catch (error) {
+      // eslint-disable-next-line max-len
+      throw new HttpError(404, `Session ${sessionId} not found, error: ${error}`);
+    }
+    let messages: Message[] = [];
+    try {
+      messages = snapshot.docs.map((doc) => {
+        return convertResourceDates(doc.data() as Message) as Message;
+      });
+    } catch (error) {
+      // eslint-disable-next-line max-len
+      throw new HttpError(500, `Failed to convert firestore snapshot to Message[], error: ${error}`);
+    }
+    let sortedMessages: Message[] = [];
+    try {
+      sortedMessages = messages.sort((a, b) => {
+        const lhs = a.createdAt ? a.createdAt : new Date(0);
+        const rhs = b.createdAt ? b.createdAt : new Date(0);
+        return lhs.getTime() - rhs.getTime();
+      });
+    } catch (error) {
+    // eslint-disable-next-line max-len
+      throw new HttpError(500, `Failed to sort messages, error: ${error}`);
+    }
     return sortedMessages;
   }
 }
