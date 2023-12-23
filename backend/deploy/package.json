@@ -41,7 +41,19 @@
     "build:crawler:prod": "npm run build && cd ../crawler && npm run config:prod && npm run build",
     "deploy:crawler:local": "npm run build:crawler:local && cd ../crawler && node lib/index.js",
     "deploy:crawler:dev": "npm run build:crawler:dev && node lib/deploy/crawler.js -p dev",
-    "deploy:crawler:prod": "npm run build:crawler:prod && node lib/deploy/crawler.js -p prod"
+    "deploy:crawler:prod": "npm run build:crawler:prod && node lib/deploy/crawler.js -p prod",
+    "cli:like:local": "npm run build && node lib/cli/like.js http://localhost:8083",
+    "cli:like:dev": "npm run build && node lib/cli/like.js https://us-central1-chatbot-dev-406508.cloudfunctions.net/like",
+    "cli:like:prod": "npm run build && node lib/cli/like.js https://us-central1-chatbot-32ff4.cloudfunctions.net/like",
+    "test:like:local": "npm run build && PHASE=local ./node_modules/.bin/jest --verbose lib/test/like.test.js",
+    "test:like:dev": "npm run build && PHASE=dev ./node_modules/.bin/jest --verbose lib/test/like.test.js",
+    "test:like:prod": "npm run build && PHASE=prod ./node_modules/.bin/jest --verbose lib/test/like.test.js",
+    "build:like:local": "npm run build && cd ../like && npm run config:local && npm run build",
+    "build:like:dev": "npm run build && cd ../like && npm run config:dev && npm run build",
+    "build:like:prod": "npm run build && cd ../like && npm run config:prod && npm run build",
+    "deploy:like:local": "npm run build:like:local && cd ../like && node lib/index.js",
+    "deploy:like:dev": "npm run build:like:dev && node lib/deploy/like.js -p dev",
+    "deploy:like:prod": "npm run build:like:prod && node lib/deploy/like.js -p prod"
   },
   "author": "Seungpyo Hong",
   "license": "ISC",
@@ -56,7 +68,8 @@
     "@google-cloud/functions": "^3.0.1",
     "@google-cloud/iam": "^1.0.1",
     "@google-cloud/iam-credentials": "^3.0.1",
-    "@orca.ai/pulse": "^1.0.38",
+    "@orca.ai/pulse": "^1.0.48",
+    "firebase-admin": "^12.0.0",
     "google-auth-library": "^9.4.1"
   }
 }
