@@ -24,7 +24,8 @@ export enum Region {
 
 export enum FunctionName {
   chat = 'chat',
-  crawler = 'crawler',
+  // crawler = 'crawler',
+  hysuCrawler = 'hysuCrawler',
   chroma = 'chroma',
   like = 'like',
   errorReport = 'errorReport',
@@ -32,7 +33,7 @@ export enum FunctionName {
 }
 
 export enum VPCConnector {
-  dev = 'projects/chatbot-dev/locations/us-central1/connectors/chroma-connector',
+  dev = 'projects/chatbot-dev-406508/locations/us-central1/connectors/chroma-connector',
   prod = 'projects/chatbot-32ff4/locations/us-central1/connectors/chroma-connector',
 }
 
@@ -140,6 +141,19 @@ export async function deploy(argv: Arguments) : Promise<void> {
     throw err;
   }
   console.log(`Deploying ${argv.functionName} to ${argv.project}...`);
+  const npmTokenCommand = "$(gcloud secrets versions access latest --secret=\"orca-npm-token\" --format=\"get(payload.data)\" | base64 --decode)";
+  const phase = (() => {
+    switch (argv.project) {
+      case Project.dev:
+        return Phase.dev;
+      case Project.prod:
+        return Phase.prod;
+      default:
+        throw new Error(`Unexpected project: ${argv.project}`);
+    }
+  })();
+
+
   const args = [
     "functions",
     "deploy",
@@ -161,8 +175,10 @@ export async function deploy(argv: Arguments) : Promise<void> {
     "--gen2",
     "--concurrency",
     "1",
-    "--set-build-env-vars=NPM_TOKEN=$(gcloud secrets versions access latest --secret=\"orca-npm-token\" --format=\"get(payload.data)\" | base64 --decode)",
-    "--set-env-vars=NPM_TOKEN=$(gcloud secrets versions access latest --secret=\"orca-npm-token\" --format=\"get(payload.data)\" | base64 --decode)",
+    "--max-instances",
+    "1",
+    `--set-build-env-vars=NPM_TOKEN=${npmTokenCommand}`,
+    `--set-env-vars=NPM_TOKEN=${npmTokenCommand},PHASE=${phase}`,
   ];
   if (argv.vpcConnector) {
     args.push("--vpc-connector", argv.vpcConnector);

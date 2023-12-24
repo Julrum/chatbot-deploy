@@ -1,0 +1,20 @@
+{
+  "name": "hysu-crawler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && node lib/crawl.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@orca.ai/pulse": "^1.0.57",
+    "firebase-functions": "^4.5.0",
+    "node-html-parser": "^6.1.11"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

@@ -18,7 +18,7 @@ async function accessOpenAIAPIKey() {
     const secretManagerClient = new secret_manager_1.SecretManagerServiceClient();
     const openaiAPIKeySecret = await secretManagerClient.accessSecretVersion({
         // eslint-disable-next-line max-len
-        name: "projects/228958603217/secrets/chatbot-cloud-function-openai/versions/latest",
+        name: config_1.config.openaiApiKeyUri,
     });
     const openaiAPIKey = (_b = (_a = openaiAPIKeySecret[0].payload) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.toString();
     if (!openaiAPIKey) {
@@ -111,7 +111,7 @@ app.post("/collections/:collectionId/documents", async (req, res) => {
     }
     catch (e) {
         res.status(500).send({
-            message: "Failed to access openai api key.",
+            message: `Failed to access openai api key, error: ${e}`,
         });
         return;
     }

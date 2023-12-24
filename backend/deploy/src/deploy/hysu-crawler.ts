@@ -9,10 +9,10 @@ import {hideBin} from 'yargs/helpers';
 
 const devArgs: Arguments = {
   project: Project.dev,
-  source: "../crawler",
-  functionName: FunctionName.crawler,
+  source: "../hysu-crawler",
+  functionName: FunctionName.hysuCrawler,
   region: Region.iowa,
-  memory: "2048MB",
+  memory: "256MB",
   vpcConnector: null,
   timeout: "300s",
   help: null,
@@ -20,10 +20,10 @@ const devArgs: Arguments = {
 
 const prodArgs: Arguments = {
   project: Project.prod,
-  source: "../crawler",
-  functionName: FunctionName.crawler,
+  source: "../hysu-crawler",
+  functionName: FunctionName.hysuCrawler,
   region: Region.iowa,
-  memory: "2048MB",
+  memory: "256MB",
   vpcConnector: null,
   timeout: "300s",
   help: null,

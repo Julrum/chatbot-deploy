@@ -9,10 +9,10 @@
     "dev": "https://us-central1-chatbot-dev-406508.cloudfunctions.net/chroma",
     "prod": "https://us-central1-chatbot-32ff4.cloudfunctions.net/chroma"
   },
-  "crawler": {
+  "hysuCrawler": {
     "local": "http://localhost:8082",
-    "dev": "https://us-central1-chatbot-dev-406508.cloudfunctions.net/crawler",
-    "prod": "https://us-central1-chatbot-32ff4.cloudfunctions.net/crawler"
+    "dev": "https://us-central1-chatbot-dev-406508.cloudfunctions.net/hysuCrawler",
+    "prod": "https://us-central1-chatbot-32ff4.cloudfunctions.net/hysuCrawler"
   },
   "like": {
     "local": "http://localhost:8083",

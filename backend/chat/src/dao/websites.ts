@@ -50,13 +50,13 @@ export class WebsiteDAO extends BaseChatDAO<Website> {
       console.debug("Chroma function is available");
     } catch (error) {
       // eslint-disable-next-line max-len
-      throw new Error(`Chroma function at ${config.chromaFunctionUrl} is not available, error=${error}`);
+      throw new HttpError(500, `Chroma function at ${config.chromaFunctionUrl} is not available, error=${error}`);
     }
     try {
       await chromaClient.createCollection(website.id);
     } catch (error) {
       // eslint-disable-next-line max-len
-      throw new Error(`Failed to create collection for website ${website.id}, details: ${error}`);
+      throw new HttpError(500, `Failed to create collection for website ${website.id}, details: ${error}`);
     }
     try {
       await ref.set(website);
@@ -64,9 +64,10 @@ export class WebsiteDAO extends BaseChatDAO<Website> {
       try {
         await chromaClient.deleteCollection(website.id);
       } catch (error) {
-        throw new Error(`Failed to clear collection for website ${website.id}`);
+        // eslint-disable-next-line max-len
+        throw new HttpError(500, `Failed to clear collection for website ${website.id}`);
       }
-      throw new Error(`Failed to create website ${website.id}`);
+      throw new HttpError(500, `Failed to create website ${website.id}`);
     }
     return website;
   }

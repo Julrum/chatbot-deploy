@@ -29,7 +29,13 @@ afterEach(async () => {
   if (testCollection === undefined) {
     return;
   }
+  try {
   await chromaClient.deleteCollection(testCollection.name);
+  } catch (error) {
+    console.error(`Failed to delete test collection: ${testCollection.name}`);
+    console.error(`Maybe the Chroma API is not running?`);
+    throw error;
+  }
 });
 
 describe('Chat REST API Test', () => {
@@ -52,7 +58,12 @@ describe('Chat REST API Test', () => {
       url: "https://www.google.com",
       description: "test website",
     };
-    const website = await chatClient.addWebsite(websiteToAdd);
+    let website: Website;
+    try {
+      website = await chatClient.addWebsite(websiteToAdd);
+    } catch (error) {
+      throw Error(`Failed to add website: ${JSON.stringify(websiteToAdd)}, error: ${error}`);
+    }
     expect(website.id).not.toBeNull();
     expect(website.createdAt).not.toBeNull();
     expect(website.deletedAt).toBeNull();
@@ -65,7 +76,12 @@ describe('Chat REST API Test', () => {
       createdAt: null,
       deletedAt: null,
     };
-    const session = await chatClient.addSession(website.id!, sessionToAdd);
+    let session: Session;
+    try {
+      session = await chatClient.addSession(website.id!, sessionToAdd);
+    } catch (error) {
+      throw Error(`Failed to add session: ${JSON.stringify(sessionToAdd)}, error: ${error}`);
+    }
     expect(session.id).not.toBeNull();
     expect(session.createdAt).not.toBeNull();
     expect(session.deletedAt).toBeNull();
@@ -85,9 +101,18 @@ describe('Chat REST API Test', () => {
       ],
     } as Message));
     for (const messageToAdd of messagesToAdd) {
-      await chatClient.addMessage(website.id!, session.id!, messageToAdd);
+      try {
+        await chatClient.addMessage(website.id!, session.id!, messageToAdd);
+      } catch (error) {
+        throw Error(`Failed to add message: ${JSON.stringify(messageToAdd)}, error: ${error}`);
+      }
     }
-    const listedMessages = await chatClient.listMessages(website.id!, session.id!);
+    let listedMessages: Message[];
+    try {
+      listedMessages = await chatClient.listMessages(website.id!, session.id!);
+    } catch (error) {
+      throw Error(`Failed to list messages, error: ${error}`);
+    }
     expect(listedMessages.length).toBe(messagesToAdd.length);
     listedMessages.forEach((listedMessage, i) => {
       expect(listedMessage.id).not.toBeNull();
@@ -102,8 +127,16 @@ describe('Chat REST API Test', () => {
         expect(listedChild.content).toBe(messagesToAdd[i].children[j].content);
       });
     });
-    await chatClient.deleteSession(website.id!, session.id!);
-    await chatClient.deleteWebsite(website.id!);
+    try {
+      await chatClient.deleteSession(website.id!, session.id!);
+    } catch (error) {
+      throw Error(`Failed to delete session: ${session.id}, error: ${error}`);
+    }
+    try {
+      await chatClient.deleteWebsite(website.id!);
+    } catch (error) {
+      throw Error(`Failed to delete website: ${website.id}, error: ${error}`);
+    }
   }, 1 * 60 * 1000);
   it("Query test", async () => {
     const website = await chatClient.addWebsite({

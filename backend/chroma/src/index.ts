@@ -22,7 +22,7 @@ async function accessOpenAIAPIKey() : Promise<string> {
   const secretManagerClient = new SecretManagerServiceClient();
   const openaiAPIKeySecret = await secretManagerClient.accessSecretVersion({
     // eslint-disable-next-line max-len
-    name: "projects/228958603217/secrets/chatbot-cloud-function-openai/versions/latest",
+    name: config.openaiApiKeyUri,
   });
   const openaiAPIKey = openaiAPIKeySecret[0].payload?.data?.toString();
   if (!openaiAPIKey) {
@@ -118,7 +118,7 @@ app.post("/collections/:collectionId/documents",
       openaiAPIKey = await accessOpenAIAPIKey();
     } catch (e) {
       res.status(500).send({
-        message: "Failed to access openai api key.",
+        message: `Failed to access openai api key, error: ${e}`,
       } as StringMessage);
       return;
     }
