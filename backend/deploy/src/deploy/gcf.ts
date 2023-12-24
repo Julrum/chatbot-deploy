@@ -30,6 +30,7 @@ export enum FunctionName {
   like = 'like',
   errorReport = 'errorReport',
   // prompt = 'prompt',
+  textify = 'textify',
 }
 
 export enum VPCConnector {

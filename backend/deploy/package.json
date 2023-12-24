@@ -65,7 +65,19 @@
     "build:error-report:prod": "npm run build && cd ../error-report && npm run config:prod && npm run build",
     "deploy:error-report:local": "npm run build:error-report:local && cd ../error-report && node lib/index.js",
     "deploy:error-report:dev": "npm run build:error-report:dev && node lib/deploy/error-report.js -p dev",
-    "deploy:error-report:prod": "npm run build:error-report:prod && node lib/deploy/error-report.js -p prod"
+    "deploy:error-report:prod": "npm run build:error-report:prod && node lib/deploy/error-report.js -p prod",
+    "cli:textify:local": "npm run build && node lib/cli/textify.js http://localhost:8085",
+    "cli:textify:dev": "npm run build && node lib/cli/textify.js https://us-central1-chatbot-dev-406508.cloudfunctions.net/textify",
+    "cli:textify:prod": "npm run build && node lib/cli/textify.js https://us-central1-chatbot-32ff4.cloudfunctions.net/textify",
+    "test:textify:local": "npm run build && PHASE=local DRIVER_PORT=8085 ./node_modules/.bin/jest --verbose lib/test/textify.test.js",
+    "test:textify:dev": "npm run build && PHASE=dev ./node_modules/.bin/jest --verbose lib/test/textify.test.js",
+    "test:textify:prod": "npm run build && PHASE=prod ./node_modules/.bin/jest --verbose lib/test/textify.test.js",
+    "build:textify:local": "npm run build && cd ../textify && npm run build",
+    "build:textify:dev": "npm run build && cd ../textify npm run build",
+    "build:textify:prod": "npm run build && cd ../textify && npm run build",
+    "deploy:textify:local": "npm run build:textify:local && cd ../textify && PHASE=local DRIVER_PORT=8085 node lib/index.js",
+    "deploy:textify:dev": "npm run build:textify:dev && PHASE=dev node lib/deploy/textify.js -p dev",
+    "deploy:textify:prod": "npm run build:textify:prod && PHASE=prod node lib/deploy/textify.js -p prod"
   },
   "author": "Seungpyo Hong",
   "license": "ISC",
@@ -80,7 +92,7 @@
     "@google-cloud/functions": "^3.0.1",
     "@google-cloud/iam": "^1.0.1",
     "@google-cloud/iam-credentials": "^3.0.1",
-    "@orca.ai/pulse": "^1.0.58",
+    "@orca.ai/pulse": "^1.0.64",
     "firebase-admin": "^12.0.0",
     "google-auth-library": "^9.4.1"
   }

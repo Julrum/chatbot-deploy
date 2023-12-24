@@ -1,0 +1,16 @@
+{
+  "name": "textify",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/vision": "^4.0.2",
+    "@orca.ai/pulse": "^1.0.64",
+    "firebase-functions": "^4.5.0"
+  }
+}

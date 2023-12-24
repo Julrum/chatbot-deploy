@@ -23,5 +23,10 @@
     "local": "http://localhost:8084",
     "dev": "https://us-central1-chatbot-dev-406508.cloudfunctions.net/errorReport",
     "prod": "https://us-central1-chatbot-32ff4.cloudfunctions.net/errorReport"
+  },
+  "textify": {
+    "local": "http://localhost:8085",
+    "dev": "https://us-central1-chatbot-dev-406508.cloudfunctions.net/textify",
+    "prod": "https://us-central1-chatbot-32ff4.cloudfunctions.net/textify"
   }
 }
