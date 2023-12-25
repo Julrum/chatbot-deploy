@@ -1,5 +1,7 @@
 import styled, { css } from "styled-components";
 
+import { ArrowUp } from "./Icons";
+
 const InputComponent = styled.div<{ $isActive: boolean }>`
   transition: width 150ms ease;
   width: 100%;
@@ -67,7 +69,9 @@ const Footer = ({
         $isActive={!!message}
         onClick={handleSendMessage}
       >
-        <i>arrow_upward_alt</i>
+        <i>
+          <ArrowUp />
+        </i>
       </SendButton>
     </nav>
   </footer>

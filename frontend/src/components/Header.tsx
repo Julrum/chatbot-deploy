@@ -1,11 +1,15 @@
+import { Close, ThumbUp } from "./Icons";
+
 const Header = ({
   imageUrl,
   name,
   onLikeButtonClick,
+  setClose,
 }: {
   imageUrl?: string;
   name?: string;
   onLikeButtonClick?: () => void;
+  setClose: () => void;
 }) => (
   <header className="surface fixed">
     <nav>
@@ -18,16 +22,18 @@ const Header = ({
         className="circle transparent"
         onClick={onLikeButtonClick}
       >
-        <i>thumb_up</i>
+        <i>
+          <ThumbUp />
+        </i>
       </button>
       <button
         aria-label="close"
         className="circle transparent"
-        onClick={() => {
-          window.parent.postMessage("close", "*");
-        }}
+        onClick={setClose}
       >
-        <i>close</i>
+        <i>
+          <Close />
+        </i>
       </button>
     </nav>
   </header>
