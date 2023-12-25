@@ -92,7 +92,7 @@
     "@google-cloud/functions": "^3.0.1",
     "@google-cloud/iam": "^1.0.1",
     "@google-cloud/iam-credentials": "^3.0.1",
-    "@orca.ai/pulse": "^1.0.65",
+    "@orca.ai/pulse": "^1.0.66",
     "firebase-admin": "^12.0.0",
     "google-auth-library": "^9.4.1"
   }
