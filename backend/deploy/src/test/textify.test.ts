@@ -1,24 +1,28 @@
-import { CrawlRequest, DuplicateCrawlStrategy, HYSUCrawlerClient, ResourceName} from "@orca.ai/pulse";
+import { CrawlRequest, DuplicateCrawlStrategy, HYSUCrawledDocument, HYSUCrawlerClient, ResourceName} from "@orca.ai/pulse";
 import { getFunctionURLFromEnv } from "./common";
 import { FunctionName } from "../deploy/gcf";
-import { TextifyClient, TextifyRequest, TextifyResponse, TextifyText } from "@orca.ai/pulse";
+import { TextifyClient, TextifyResponse, TextifyText } from "@orca.ai/pulse";
 import admin from "firebase-admin";
+import { getFirebaseAppByPhase } from "./firebase-helper";
 
 let crawlClient: HYSUCrawlerClient;
 let textifyClient: TextifyClient;
 let testWebsiteId: string
+let firebaseApp: admin.app.App;
 beforeAll(() => {
-  admin.initializeApp();
+  firebaseApp = getFirebaseAppByPhase();
 });
 beforeEach(async () => {
   const textifyURL = getFunctionURLFromEnv(FunctionName.textify);
+  const crawlerURL = getFunctionURLFromEnv(FunctionName.hysuCrawler);
+  crawlClient = new HYSUCrawlerClient(crawlerURL);
   textifyClient = new TextifyClient(textifyURL);
   testWebsiteId = `test-website-${(new Date()).getTime()}`;
 });
 
 afterEach(async () => {
   console.debug(`Deleting test website: ${testWebsiteId}`);
-  const db = admin.firestore();
+  const db = firebaseApp.firestore();
   if (testWebsiteId === undefined) {
     return;
   }
@@ -35,7 +39,7 @@ describe('Textify Test', () => {
   it('Textify single document', async () => {
     const crawlRequest: CrawlRequest = {
       minId: 3080,
-      maxId: 3090,
+      maxId: 3085,
       retryConfig: {
         maxRetry: 3,
         intervalInMilliseconds: undefined,
@@ -50,7 +54,21 @@ describe('Textify Test', () => {
       console.error(`Failed to crawl: ${JSON.stringify(crawlRequest)}`);
       throw error;
     }
-    console.debug(`Crawling done. Now textifying...`);
+
+    console.debug(`Crawling done. Double checking the result...`);
+    const db = firebaseApp.firestore();
+    const c = db.collection(ResourceName.Websites).doc(testWebsiteId).collection(ResourceName.CrawledDocuments);
+    let s: FirebaseFirestore.QuerySnapshot;
+    try {
+      s = await c.get();
+    } catch (error) {
+      console.error(`Failed to get snapshot: ${error}`);
+      throw error;
+    }
+    console.debug(`s.docs.length: ${s.docs.length}`);
+    const crawledDocuments = s.docs.map(doc => doc.data() as HYSUCrawledDocument);
+    console.debug(`crawledDocuments.length: ${crawledDocuments.length}`);
+    expect(crawledDocuments.length).toBe(crawlRequest.maxId - crawlRequest.minId + 1);
 
     const numDocuments = crawlRequest.maxId - crawlRequest.minId + 1;
     const documentIds = Array(numDocuments).fill(0).map((_, i) => `${i + crawlRequest.minId}`);
@@ -64,7 +82,6 @@ describe('Textify Test', () => {
     }
     console.debug(`Textify done. Checking the result...`);
     const textIds = textifyResponse.textIds;
-    const db = admin.firestore();
     const collection = db.collection(ResourceName.Websites).doc(testWebsiteId).collection(ResourceName.Texts);
     let snapshot: FirebaseFirestore.QuerySnapshot;
     try {
@@ -74,6 +91,7 @@ describe('Textify Test', () => {
       throw error;
     }
     const textsInDB = snapshot.docs.map(doc => doc.data() as TextifyText);
+    console.debug(`texts first doc: ${JSON.stringify(textsInDB[0])}`);
     console.debug(`texts.length: ${textsInDB.length}`);
     expect(textsInDB.length).toBe(textIds.length);
     for (const text of textsInDB) {

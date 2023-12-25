@@ -1,6 +1,5 @@
 import {logger} from "firebase-functions";
 import {onRequest} from "firebase-functions/v2/https";
-import {initializeApp} from "firebase-admin/app";
 import express from "express";
 import { PingResponse, HttpError, StringMessage, CrawlRequest, CrawledDocument } from "@orca.ai/pulse";
 import { 
@@ -13,7 +12,6 @@ import {
 import { getDriver } from "./driver";
 import { validateCrawlRequest } from "./type-utils";
 
-initializeApp();
 const app = express();
 
 app.use(express.json());

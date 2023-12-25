@@ -11,7 +11,9 @@ import {
   isValidResponse,
 } from "./type-utils";
 import { HTMLElement, parse as parseHtml } from "node-html-parser";
-import admin from "firebase-admin";
+import { getFirebaseAppByPhase } from "./firebase-helper";
+
+const firebaseApp = getFirebaseAppByPhase();
 
 async function crawlSinglePage(id: string, url: string): Promise<CrawledDocument> {
   let response: Response;
@@ -115,7 +117,7 @@ export function generateUrlsToCrawl(baseUrl: string, idsToCrawl: string[]): stri
 }
 
 export async function filterIdsToCrawl(ids: string[], websiteId: string, strategy: DuplicateCrawlStrategy): Promise<string[]> {
-  const db = admin.firestore();
+  const db = firebaseApp.firestore();
   // Firestore "in" query has a limit of 30 ids at the same time.
   const idBatchSize = 30;
   const numIdBatches = Math.ceil(ids.length / idBatchSize);
@@ -148,7 +150,7 @@ export async function filterIdsToCrawl(ids: string[], websiteId: string, strateg
 }
 
 export async function writeCrawledDocumentInFireStore(websiteId: string, documents: CrawledDocument[]): Promise<void> {
-  const db = admin.firestore();
+  const db = firebaseApp.firestore();
   const batch = db.batch();
   const crawledAt = (new Date()).toISOString();
   const documentsWithCrawledAt = documents.map((document) => {
